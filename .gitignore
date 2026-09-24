@@ -1,0 +1,62 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# .NET
+artifacts/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+## gitignore
+.artifacts/
+.github/
+.history/
+.kilo/
+.vscode/
+docs/
+installers/dist/
+codicks_lite_macos_mcp_v1.md
+chunked/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+secrets.json
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+
+# Local publish/build output
+publish/
+dist/

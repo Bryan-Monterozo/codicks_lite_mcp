@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CODICKS_LITE_VERSION="1.1.1"
+CONFIGURATION="Release"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+SOLUTION="$ROOT_DIR/Codicks.Lite.Mcp.slnx"
+HOST_PROJECT="$ROOT_DIR/src/LocalAgent.Host/LocalAgent.Host.csproj"
+DIST_DIR="$SCRIPT_DIR/dist"
+WORK_DIR="$ROOT_DIR/.artifacts/release-$CODICKS_LITE_VERSION"
+
+RUN_TESTS=false
+BUILD_ALL=false
+REQUESTED_RID=""
+
+info() { printf '\n==> %s\n' "$1"; }
+fail() { printf '\nERROR: %s\n' "$1" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+Build Codicks Lite MCP 1.1.0 distributable macOS release packages locally.
+
+Usage:
+  ./installers/build_codicks-lite_v1_1_1_release_macos [options]
+
+Options:
+  --all                 Build both osx-arm64 and osx-x64 packages.
+  --rid osx-arm64       Build one explicit RID.
+  --rid osx-x64
+  --with-tests          Run the full test suite before packaging.
+  --clean               Remove old v1.1 build/package artifacts first.
+  -h, --help            Show help.
+
+Default:
+  Builds a self-contained package for the current Mac architecture.
+
+Output:
+  installers/dist/codicks-lite-1.1.0-macos-arm64.tar.gz
+  installers/dist/codicks-lite-1.1.0-macos-arm64.sha256
+
+or the x64 equivalent.
+
+The package is self-contained: recipients do not need the .NET runtime or SDK.
+EOF
+}
+
+CLEAN=false
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --all)
+        BUILD_ALL=true
+        shift
+        ;;
+      --rid)
+        [[ $# -ge 2 ]] || fail "--rid requires osx-arm64 or osx-x64."
+        REQUESTED_RID="$2"
+        shift 2
+        ;;
+      --with-tests)
+        RUN_TESTS=true
+        shift
+        ;;
+      --clean)
+        CLEAN=true
+        shift
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        fail "Unknown argument: $1"
+        ;;
+    esac
+  done
+
+  if [[ -n "$REQUESTED_RID" && "$BUILD_ALL" == true ]]; then
+    fail "Use either --all or --rid, not both."
+  fi
+
+  if [[ -n "$REQUESTED_RID" && "$REQUESTED_RID" != "osx-arm64" && "$REQUESTED_RID" != "osx-x64" ]]; then
+    fail "Unsupported RID: $REQUESTED_RID"
+  fi
+}
+
+ensure_prerequisites() {
+  [[ "$(uname -s)" == "Darwin" ]] || fail "Release packaging must run on macOS."
+  command -v dotnet >/dev/null 2>&1 || fail "dotnet SDK is required to build releases."
+  command -v tar >/dev/null 2>&1 || fail "tar is required."
+  command -v shasum >/dev/null 2>&1 || fail "shasum is required."
+
+  [[ -f "$SOLUTION" ]] || fail "Missing solution: $SOLUTION"
+  [[ -f "$HOST_PROJECT" ]] || fail "Missing host project: $HOST_PROJECT"
+  [[ -f "$SCRIPT_DIR/codicks-lite_v1_1_1_setup_macos" ]] || fail "Missing package installer template."
+
+  local sdk
+  sdk="$(dotnet --version)"
+  case "$sdk" in
+    10.*) ;;
+    *) fail ".NET 10 SDK is required; found $sdk." ;;
+  esac
+
+  printf 'Using .NET SDK: %s\n' "$sdk"
+}
+
+current_rid() {
+  case "$(uname -m)" in
+    arm64|aarch64) printf '%s\n' "osx-arm64" ;;
+    x86_64|amd64) printf '%s\n' "osx-x64" ;;
+    *) fail "Unsupported Mac architecture: $(uname -m)" ;;
+  esac
+}
+
+prepare() {
+  if [[ "$CLEAN" == true ]]; then
+    info "Cleaning previous v1.1 release artifacts"
+    rm -rf "$WORK_DIR"
+    rm -f "$DIST_DIR"/codicks-lite-"$CODICKS_LITE_VERSION"-macos-*.tar.gz
+    rm -f "$DIST_DIR"/codicks-lite-"$CODICKS_LITE_VERSION"-macos-*.sha256
+  fi
+
+  mkdir -p "$WORK_DIR" "$DIST_DIR"
+}
+
+build_solution() {
+  info "Restoring solution"
+  dotnet restore "$SOLUTION"
+
+  info "Building solution ($CONFIGURATION)"
+  dotnet build "$SOLUTION"     --configuration "$CONFIGURATION"     --no-restore
+
+  if [[ "$RUN_TESTS" == true ]]; then
+    info "Running full test suite"
+    dotnet test "$SOLUTION"       --configuration "$CONFIGURATION"       --no-build
+  else
+    printf 'Tests not requested. Use --with-tests to run them.\n'
+  fi
+}
+
+package_name_for_rid() {
+  case "$1" in
+    osx-arm64) printf '%s\n' "codicks-lite-$CODICKS_LITE_VERSION-macos-arm64" ;;
+    osx-x64) printf '%s\n' "codicks-lite-$CODICKS_LITE_VERSION-macos-x64" ;;
+    *) fail "Unsupported RID: $1" ;;
+  esac
+}
+
+build_package() {
+  local rid="$1"
+  local package_name
+  package_name="$(package_name_for_rid "$rid")"
+
+  local package_root="$WORK_DIR/$package_name"
+  local publish_dir="$package_root/app"
+
+  info "Publishing self-contained $rid release"
+
+  rm -rf "$package_root"
+  mkdir -p     "$publish_dir"     "$package_root/tools"     "$package_root/config"     "$package_root/docs"
+
+  dotnet restore "$HOST_PROJECT" --runtime "$rid"
+
+  dotnet publish "$HOST_PROJECT"     --configuration "$CONFIGURATION"     --runtime "$rid"     --self-contained true     --no-restore     -p:PublishSingleFile=false     -p:DebugSymbols=false     -p:DebugType=None     --output "$publish_dir"
+
+  [[ -x "$publish_dir/LocalAgent.Host" ]]     || fail "Publish did not produce the self-contained LocalAgent.Host executable for $rid."
+
+  printf '%s\n' "$CODICKS_LITE_VERSION" > "$publish_dir/codicks-lite-version.txt"
+  printf '%s\n' "$rid" > "$publish_dir/codicks-lite-runtime-id.txt"
+
+  cp "$SCRIPT_DIR/codicks-lite_v1_1_1_setup_macos" "$package_root/install"
+  cp "$ROOT_DIR/scripts/codicks-lite-control" "$package_root/tools/codicks-lite-control"
+  cp "$ROOT_DIR/setup_config.sh" "$package_root/tools/setup_config.sh"
+  cp "$ROOT_DIR/src/LocalAgent.Host/appsettings.json" "$package_root/config/agent.default.json"
+  cp "$ROOT_DIR/docs/runbook.md" "$package_root/docs/runbook.md"
+  cp "$ROOT_DIR/docs/v1.1-session-security.md" "$package_root/docs/v1.1-session-security.md"
+
+  chmod 755     "$package_root/install"     "$package_root/tools/codicks-lite-control"     "$package_root/tools/setup_config.sh"
+
+  local host_sha
+  host_sha="$(shasum -a 256 "$publish_dir/LocalAgent.Host" | awk '{print $1}')"
+
+  local source_revision="unavailable"
+  if command -v git >/dev/null 2>&1 && git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    source_revision="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || printf 'unavailable')"
+  fi
+
+  cat > "$package_root/manifest.txt" <<EOF
+product=Codicks Lite MCP
+version=$CODICKS_LITE_VERSION
+runtime_id=$rid
+configuration=$CONFIGURATION
+self_contained=true
+tests_run=$RUN_TESTS
+source_revision=$source_revision
+local_agent_host_sha256=$host_sha
+built_at_utc=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+EOF
+
+  local archive="$DIST_DIR/$package_name.tar.gz"
+  local checksum="$DIST_DIR/$package_name.sha256"
+
+  rm -f "$archive" "$checksum"
+
+  (
+    cd "$WORK_DIR"
+    tar -czf "$archive" "$package_name"
+  )
+
+  shasum -a 256 "$archive" > "$checksum"
+
+  printf '\nPackage ready:\n  %s\n' "$archive"
+  printf 'Checksum:\n  %s\n' "$checksum"
+}
+
+print_summary() {
+  cat <<EOF
+
+===============================================================================
+Codicks Lite MCP $CODICKS_LITE_VERSION local release build complete
+===============================================================================
+
+Distribution directory:
+  $DIST_DIR
+
+This builder:
+  - compiles directly from the current workspace
+  - does not embed/reconstruct source into the installer
+  - can run the full solution tests with --with-tests
+  - publishes self-contained macOS binaries
+  - packages the compiled app, installer, config, tools, docs, and manifest
+  - generates SHA-256 checksums
+
+Recipients only need to:
+  tar -xzf codicks-lite-$CODICKS_LITE_VERSION-macos-<arch>.tar.gz
+  cd codicks-lite-$CODICKS_LITE_VERSION-macos-<arch>
+  ./install
+
+No .NET SDK/runtime is required on the recipient Mac.
+===============================================================================
+EOF
+}
+
+main() {
+  parse_args "$@"
+  ensure_prerequisites
+  prepare
+  build_solution
+
+  if [[ "$BUILD_ALL" == true ]]; then
+    build_package "osx-arm64"
+    build_package "osx-x64"
+  elif [[ -n "$REQUESTED_RID" ]]; then
+    build_package "$REQUESTED_RID"
+  else
+    build_package "$(current_rid)"
+  fi
+
+  print_summary
+}
+
+main "$@"

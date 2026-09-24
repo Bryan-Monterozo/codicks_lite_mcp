@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$HOME/Library/Application Support/CodicksLiteMcp"
+SOCKET_PATH="$APP_ROOT/run/control.sock"
+NC_BIN="/usr/bin/nc"
+
+usage() {
+  cat <<'EOF'
+Codicks Lite local session control
+
+Usage:
+  codicks-lite-control status
+  codicks-lite-control --locked
+  codicks-lite-control --read --otp <OTP> [--for <minutes>]
+  codicks-lite-control --full --otp <OTP> [--for <minutes>]
+EOF
+}
+
+fail() {
+  printf 'codicks-lite-control: %s\n' "$1" >&2
+  exit 1
+}
+
+send_request() {
+  local payload="$1"
+
+  [[ -S "$SOCKET_PATH" ]] \
+    || fail "control socket is not available: $SOCKET_PATH"
+
+  [[ -x "$NC_BIN" ]] \
+    || fail "macOS nc was not found at $NC_BIN"
+
+  printf '%s\n' "$payload" | "$NC_BIN" -U "$SOCKET_PATH"
+}
+
+json_string() {
+  local key="$1"
+  local input="$2"
+
+  printf '%s' "$input" \
+    | sed -n "s/.*\"$key\":\"\([^\"]*\)\".*/\1/p"
+}
+
+json_nullable_string() {
+  local key="$1"
+  local input="$2"
+  local value
+
+  value="$(json_string "$key" "$input")"
+  if [[ -n "$value" ]]; then
+    printf '%s' "$value"
+  else
+    printf '%s' "none"
+  fi
+}
+
+display_response() {
+  local response="$1"
+
+  if ! printf '%s' "$response" | grep -Fq '"success":true'; then
+    local error
+    error="$(json_string "error" "$response")"
+    [[ -n "$error" ]] || error="request failed"
+    fail "$error"
+  fi
+
+  local mode started lease otp_active otp_expiry
+  mode="$(json_string "mode" "$response")"
+  started="$(json_nullable_string "startedAtUtc" "$response")"
+  lease="$(json_nullable_string "leaseExpiresAtUtc" "$response")"
+  otp_expiry="$(json_nullable_string "otpExpiresAtUtc" "$response")"
+
+  if printf '%s' "$response" | grep -Fq '"otpActive":true'; then
+    otp_active="active"
+  else
+    otp_active="consumed/expired"
+  fi
+
+  printf 'Codicks Lite MCP Session\n\n'
+  printf 'Mode: %s\n' "$(printf '%s' "$mode" | tr '[:lower:]' '[:upper:]')"
+  printf 'Started: %s\n' "$started"
+  printf 'Lease expires: %s\n' "$lease"
+  printf 'OTP state: %s\n' "$otp_active"
+  printf 'OTP expires: %s\n' "$otp_expiry"
+}
+
+MODE=""
+OTP=""
+LEASE=""
+ACTION=""
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 2
+fi
+
+if [[ "$1" == "status" ]]; then
+  ACTION="status"
+  shift
+else
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --locked)
+        [[ -z "$MODE" ]] || fail "choose only one of --locked, --read, or --full"
+        MODE="locked"
+        shift
+        ;;
+      --read)
+        [[ -z "$MODE" ]] || fail "choose only one of --locked, --read, or --full"
+        MODE="read"
+        shift
+        ;;
+      --full)
+        [[ -z "$MODE" ]] || fail "choose only one of --locked, --read, or --full"
+        MODE="full"
+        shift
+        ;;
+      --otp)
+        [[ $# -ge 2 ]] || fail "--otp requires a value"
+        OTP="$2"
+        shift 2
+        ;;
+      --for)
+        [[ $# -ge 2 ]] || fail "--for requires minutes"
+        LEASE="$2"
+        [[ "$LEASE" =~ ^[1-9][0-9]*$ ]] \
+          || fail "--for must be a positive integer"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        fail "unknown argument: $1"
+        ;;
+    esac
+  done
+
+  case "$MODE" in
+    locked)
+      [[ -z "$OTP" ]] || fail "--locked does not accept --otp"
+      [[ -z "$LEASE" ]] || fail "--locked does not accept --for"
+      ACTION="lock"
+      ;;
+    read|full)
+      [[ "$OTP" =~ ^[0-9]+$ ]] \
+        || fail "--otp is required and must contain digits only"
+      ACTION="unlock"
+      ;;
+    *)
+      fail "use status, --locked, --read, or --full"
+      ;;
+  esac
+fi
+
+case "$ACTION" in
+  status)
+    REQUEST='{"action":"status"}'
+    ;;
+  lock)
+    REQUEST='{"action":"lock"}'
+    ;;
+  unlock)
+    if [[ "$MODE" == "read" ]]; then
+      CONTROL_MODE="ReadOnly"
+    else
+      CONTROL_MODE="Full"
+    fi
+
+    if [[ -n "$LEASE" ]]; then
+      REQUEST="{\"action\":\"unlock\",\"mode\":\"$CONTROL_MODE\",\"otp\":\"$OTP\",\"leaseMinutes\":$LEASE}"
+    else
+      REQUEST="{\"action\":\"unlock\",\"mode\":\"$CONTROL_MODE\",\"otp\":\"$OTP\"}"
+    fi
+    ;;
+  *)
+    fail "internal action error"
+    ;;
+esac
+
+RESPONSE="$(send_request "$REQUEST")"
+[[ -n "$RESPONSE" ]] || fail "control socket returned no response"
+display_response "$RESPONSE"

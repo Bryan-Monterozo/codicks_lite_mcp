@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LocalAgent.Core/LocalAgent.Core.csproj" />
+    <Project Path="src/LocalAgent.Host/LocalAgent.Host.csproj" />
+    <Project Path="src/LocalAgent.Infrastructure/LocalAgent.Infrastructure.csproj" />
+  </Folder>
+
+  <Folder Name="/tests/">
+    <Project Path="tests/LocalAgent.IntegrationTests/LocalAgent.IntegrationTests.csproj" />
+    <Project Path="tests/LocalAgent.UnitTests/LocalAgent.UnitTests.csproj" />
+  </Folder>
+</Solution>

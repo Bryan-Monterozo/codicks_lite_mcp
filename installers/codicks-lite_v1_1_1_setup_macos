@@ -1,0 +1,399 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CODICKS_LITE_VERSION="1.1.1"
+
+PACKAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_PAYLOAD="$PACKAGE_ROOT/app"
+TOOLS_PAYLOAD="$PACKAGE_ROOT/tools"
+CONFIG_PAYLOAD="$PACKAGE_ROOT/config"
+DOCS_PAYLOAD="$PACKAGE_ROOT/docs"
+
+APP_ROOT="$HOME/Library/Application Support/CodicksLiteMcp"
+RELEASES_DIR="$APP_ROOT/releases"
+CURRENT_LINK="$APP_ROOT/current"
+PREVIOUS_LINK="$APP_ROOT/previous"
+LEGACY_APP_DIR="$APP_ROOT/app"
+CONFIG_DIR="$APP_ROOT/config"
+CONFIG_FILE="$CONFIG_DIR/agent.json"
+TOOLS_DIR="$APP_ROOT/tools"
+DOCS_DIR="$APP_ROOT/docs/$CODICKS_LITE_VERSION"
+
+BIN_DIR="$HOME/.local/bin"
+MCP_LAUNCHER="$BIN_DIR/codicks-lite-mcp"
+ROLLBACK_LAUNCHER="$BIN_DIR/codicks-lite-mcp-rollback"
+CONTROL_LAUNCHER="$BIN_DIR/codicks-lite-control"
+CONFIG_LAUNCHER="$BIN_DIR/codicks-lite-config"
+MAIN_LAUNCHER="$BIN_DIR/codicks-lite"
+
+CONFIGURE_AFTER=false
+
+info() { printf '\n==> %s\n' "$1"; }
+fail() { printf '\nERROR: %s\n' "$1" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+Codicks Lite MCP 1.1.0 macOS package installer
+
+Usage:
+  ./install [--configure]
+
+Options:
+  --configure   Run the Codicks Lite tunnel configuration wizard after install.
+  -h, --help    Show this help.
+EOF
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --configure) CONFIGURE_AFTER=true; shift ;;
+      -h|--help) usage; exit 0 ;;
+      *) fail "Unknown argument: $1" ;;
+    esac
+  done
+}
+
+ensure_package() {
+  [[ "$(uname -s)" == "Darwin" ]] || fail "This package supports macOS only."
+  [[ -d "$APP_PAYLOAD" ]] || fail "Missing compiled app payload. Build this package with build_codicks-lite_v1_1_1_release_macos first."
+  [[ -x "$APP_PAYLOAD/LocalAgent.Host" ]] || fail "Compiled self-contained LocalAgent.Host executable is missing."
+  [[ -f "$TOOLS_PAYLOAD/codicks-lite-control" ]] || fail "Missing codicks-lite-control payload."
+  [[ -f "$TOOLS_PAYLOAD/setup_config.sh" ]] || fail "Missing setup_config.sh payload."
+  [[ -f "$CONFIG_PAYLOAD/agent.default.json" ]] || fail "Missing default agent configuration."
+}
+
+set_symlink() {
+  local target="$1"
+  local link_path="$2"
+
+  if [[ -e "$link_path" && ! -L "$link_path" ]]; then
+    fail "Refusing to replace non-symlink path: $link_path"
+  fi
+
+  rm -f "$link_path"
+  ln -s "$target" "$link_path"
+}
+
+install_release() {
+  info "Installing Codicks Lite MCP $CODICKS_LITE_VERSION"
+
+  mkdir -p "$APP_ROOT" "$RELEASES_DIR" "$CONFIG_DIR" "$TOOLS_DIR" "$DOCS_DIR" "$BIN_DIR"
+  chmod 700 "$APP_ROOT" "$CONFIG_DIR" "$TOOLS_DIR"
+
+  local rid="unknown"
+  if [[ -f "$PACKAGE_ROOT/manifest.txt" ]]; then
+    rid="$(sed -n 's/^runtime_id=//p' "$PACKAGE_ROOT/manifest.txt" | head -n 1)"
+    [[ -n "$rid" ]] || rid="unknown"
+  fi
+
+  local release_id
+  release_id="$CODICKS_LITE_VERSION-$rid-$(date +%Y%m%d-%H%M%S)-$$"
+
+  local release_dir="$RELEASES_DIR/$release_id"
+  mkdir -p "$release_dir"
+  cp -R "$APP_PAYLOAD/." "$release_dir/"
+
+  if [[ -f "$PACKAGE_ROOT/manifest.txt" ]]; then
+    cp "$PACKAGE_ROOT/manifest.txt" "$release_dir/manifest.txt"
+  fi
+
+  local old_current=""
+  if [[ -L "$CURRENT_LINK" ]]; then
+    old_current="$(readlink "$CURRENT_LINK")"
+  elif [[ -d "$LEGACY_APP_DIR" ]]; then
+    local legacy_release
+    legacy_release="$RELEASES_DIR/pre-v1.1-$(date +%Y%m%d-%H%M%S)-$$"
+    cp -R "$LEGACY_APP_DIR" "$legacy_release"
+    old_current="$legacy_release"
+  fi
+
+  if [[ -n "$old_current" && -d "$old_current" ]]; then
+    set_symlink "$old_current" "$PREVIOUS_LINK"
+  fi
+
+  set_symlink "$release_dir" "$CURRENT_LINK"
+
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    cp "$CONFIG_PAYLOAD/agent.default.json" "$CONFIG_FILE"
+  fi
+  chmod 600 "$CONFIG_FILE"
+
+  cp "$TOOLS_PAYLOAD/setup_config.sh" "$TOOLS_DIR/setup_config.sh"
+  cp "$TOOLS_PAYLOAD/codicks-lite-control" "$CONTROL_LAUNCHER"
+  chmod 700 "$TOOLS_DIR/setup_config.sh"
+  chmod 755 "$CONTROL_LAUNCHER"
+
+  if [[ -d "$DOCS_PAYLOAD" ]]; then
+    cp -R "$DOCS_PAYLOAD/." "$DOCS_DIR/"
+  fi
+
+  write_launchers
+
+  printf 'Installed release: %s\n' "$release_dir"
+  printf 'Current: %s\n' "$(readlink "$CURRENT_LINK")"
+  if [[ -L "$PREVIOUS_LINK" ]]; then
+    printf 'Previous: %s\n' "$(readlink "$PREVIOUS_LINK")"
+  fi
+}
+
+write_launchers() {
+  cat > "$MCP_LAUNCHER" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$HOME/Library/Application Support/CodicksLiteMcp"
+CURRENT="$APP_ROOT/current"
+
+[[ -L "$CURRENT" ]] || {
+  echo "ERROR: Codicks Lite current release link is missing: $CURRENT" >&2
+  exit 1
+}
+
+[[ -x "$CURRENT/LocalAgent.Host" ]] || {
+  echo "ERROR: current Codicks Lite release is incomplete: $CURRENT" >&2
+  exit 1
+}
+
+exec "$CURRENT/LocalAgent.Host" "$@"
+EOF
+  chmod 755 "$MCP_LAUNCHER"
+
+  cat > "$ROLLBACK_LAUNCHER" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$HOME/Library/Application Support/CodicksLiteMcp"
+CURRENT="$APP_ROOT/current"
+PREVIOUS="$APP_ROOT/previous"
+
+[[ -L "$CURRENT" ]] || {
+  echo "ERROR: current release link is missing." >&2
+  exit 1
+}
+[[ -L "$PREVIOUS" ]] || {
+  echo "ERROR: no previous release is available for rollback." >&2
+  exit 1
+}
+
+current_target="$(readlink "$CURRENT")"
+previous_target="$(readlink "$PREVIOUS")"
+
+[[ -d "$previous_target" ]] || {
+  echo "ERROR: previous release target no longer exists: $previous_target" >&2
+  exit 1
+}
+
+rm -f "$CURRENT" "$PREVIOUS"
+ln -s "$previous_target" "$CURRENT"
+ln -s "$current_target" "$PREVIOUS"
+
+echo "Rolled back Codicks Lite MCP."
+echo "Current:  $(readlink "$CURRENT")"
+echo "Previous: $(readlink "$PREVIOUS")"
+echo "Restart tunnel-client so it launches the selected release."
+EOF
+  chmod 755 "$ROLLBACK_LAUNCHER"
+
+  cat > "$CONFIG_LAUNCHER" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+exec "$HOME/Library/Application Support/CodicksLiteMcp/tools/setup_config.sh" "$@"
+EOF
+  chmod 755 "$CONFIG_LAUNCHER"
+
+  cat > "$MAIN_LAUNCHER" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$HOME/Library/Application Support/CodicksLiteMcp"
+BIN_DIR="$HOME/.local/bin"
+CURRENT="$APP_ROOT/current"
+PREVIOUS="$APP_ROOT/previous"
+CONFIG_FILE="$APP_ROOT/config/agent.json"
+
+usage() {
+  cat <<'HELP'
+Codicks Lite command center
+
+Tunnel/config:
+  codicks-lite setup
+  codicks-lite config
+  codicks-lite config-show
+  codicks-lite config-edit
+  codicks-lite apply
+  codicks-lite run
+  codicks-lite doctor
+  codicks-lite doctor-local
+  codicks-lite agent-config
+
+Session security:
+  codicks-lite status
+  codicks-lite lock
+  codicks-lite read --otp <OTP> [--for <minutes>]
+  codicks-lite full --otp <OTP> [--for <minutes>]
+
+Release management:
+  codicks-lite version
+  codicks-lite releases
+  codicks-lite rollback
+  codicks-lite paths
+
+Direct host:
+  codicks-lite host
+HELP
+}
+
+doctor_local() {
+  local failed=0
+  echo "Codicks Lite local doctor"
+  echo
+
+  if [[ -L "$CURRENT" && -x "$CURRENT/LocalAgent.Host" ]]; then
+    echo "[OK] current release: $(readlink "$CURRENT")"
+  else
+    echo "[FAIL] current release is missing or incomplete"
+    failed=1
+  fi
+
+  [[ -f "$CONFIG_FILE" ]] && echo "[OK] agent config" || { echo "[FAIL] agent config missing"; failed=1; }
+  [[ -x "$BIN_DIR/codicks-lite-mcp" ]] && echo "[OK] MCP launcher" || { echo "[FAIL] MCP launcher missing"; failed=1; }
+  [[ -x "$BIN_DIR/codicks-lite-control" ]] && echo "[OK] session control" || { echo "[FAIL] session control missing"; failed=1; }
+
+  if [[ -S "$APP_ROOT/run/control.sock" ]]; then
+    echo "[OK] control socket active"
+    "$BIN_DIR/codicks-lite-control" status || failed=1
+  else
+    echo "[INFO] control socket inactive; MCP host may not be running"
+  fi
+
+  if command -v tunnel-client >/dev/null 2>&1; then
+    echo "[OK] tunnel-client: $(command -v tunnel-client)"
+  else
+    echo "[INFO] tunnel-client not on PATH"
+  fi
+
+  return $failed
+}
+
+show_releases() {
+  local current_target=""
+  local previous_target=""
+
+  [[ -L "$CURRENT" ]] && current_target="$(readlink "$CURRENT")"
+  [[ -L "$PREVIOUS" ]] && previous_target="$(readlink "$PREVIOUS")"
+
+  echo "Codicks Lite releases"
+  echo
+
+  for release in "$APP_ROOT"/releases/*; do
+    [[ -d "$release" ]] || continue
+    marker=" "
+    [[ "$release" == "$current_target" ]] && marker="*"
+    [[ "$release" == "$previous_target" ]] && marker="-"
+    printf '%s %s\n' "$marker" "$(basename "$release")"
+  done
+
+  echo
+  echo "* current"
+  echo "- previous rollback target"
+}
+
+command_name="${1:-help}"
+[[ $# -gt 0 ]] && shift
+
+case "$command_name" in
+  help|-h|--help) usage ;;
+  setup) exec "$BIN_DIR/codicks-lite-config" all "$@" ;;
+  config|configure) exec "$BIN_DIR/codicks-lite-config" configure "$@" ;;
+  config-show|show) exec "$BIN_DIR/codicks-lite-config" show "$@" ;;
+  config-edit) exec "$BIN_DIR/codicks-lite-config" edit "$@" ;;
+  apply) exec "$BIN_DIR/codicks-lite-config" apply "$@" ;;
+  run) exec "$BIN_DIR/codicks-lite-config" run "$@" ;;
+  doctor) exec "$BIN_DIR/codicks-lite-config" doctor "$@" ;;
+  doctor-local) doctor_local ;;
+  status|session) exec "$BIN_DIR/codicks-lite-control" status ;;
+  lock|locked) exec "$BIN_DIR/codicks-lite-control" --locked ;;
+  read) exec "$BIN_DIR/codicks-lite-control" --read "$@" ;;
+  full) exec "$BIN_DIR/codicks-lite-control" --full "$@" ;;
+  rollback) exec "$BIN_DIR/codicks-lite-mcp-rollback" ;;
+  releases) show_releases ;;
+  version)
+    if [[ -L "$CURRENT" && -f "$CURRENT/codicks-lite-version.txt" ]]; then
+      printf 'Codicks Lite MCP %s\n' "$(cat "$CURRENT/codicks-lite-version.txt")"
+      printf 'Release: %s\n' "$(basename "$(readlink "$CURRENT")")"
+    else
+      echo "Codicks Lite version information unavailable." >&2
+      exit 1
+    fi
+    ;;
+  paths)
+    cat <<PATHS
+App root:       $APP_ROOT
+Current:        $CURRENT
+Previous:       $PREVIOUS
+Agent config:   $CONFIG_FILE
+Control socket: $APP_ROOT/run/control.sock
+MCP launcher:   $BIN_DIR/codicks-lite-mcp
+PATHS
+    ;;
+  agent-config)
+    editor="${EDITOR:-vi}"
+    exec "$editor" "$CONFIG_FILE"
+    ;;
+  host) exec "$BIN_DIR/codicks-lite-mcp" "$@" ;;
+  *)
+    echo "Unknown Codicks Lite command: $command_name" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+EOF
+  chmod 755 "$MAIN_LAUNCHER"
+}
+
+show_path_note() {
+  if printf '%s' ":$PATH:" | grep -Fq ":$BIN_DIR:"; then
+    return
+  fi
+
+  cat <<EOF
+
+NOTE:
+  $BIN_DIR is not currently on PATH.
+
+For this terminal:
+  export PATH="\$HOME/.local/bin:\$PATH"
+EOF
+}
+
+main() {
+  parse_args "$@"
+  ensure_package
+  install_release
+  show_path_note
+
+  if [[ "$CONFIGURE_AFTER" == true ]]; then
+    "$CONFIG_LAUNCHER" configure
+  fi
+
+  cat <<EOF
+
+Codicks Lite MCP $CODICKS_LITE_VERSION installed.
+
+Useful commands:
+  codicks-lite doctor-local
+  codicks-lite config
+  codicks-lite apply
+  codicks-lite doctor
+  codicks-lite run
+  codicks-lite status
+  codicks-lite read --otp <OTP> --for 10
+  codicks-lite full --otp <OTP> --for 30
+  codicks-lite lock
+  codicks-lite releases
+  codicks-lite rollback
+EOF
+}
+
+main "$@"
