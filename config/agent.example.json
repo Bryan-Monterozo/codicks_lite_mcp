@@ -54,6 +54,32 @@
       }
     }
   },
+  "Execution": {
+    "Enabled": false,
+    "MaxTimeoutSeconds": 600,
+    "MaxOutputBytes": 262144,
+    "Executables": {
+      "dotnet": {
+        "Enabled": true,
+        "AllowAnyArguments": false,
+        "AllowedCommands": ["build", "test", "restore"]
+      },
+      "git": {
+        "Enabled": true,
+        "AllowAnyArguments": false,
+        "AllowedCommands": ["status", "diff", "log"],
+        "DeniedCommands": ["push", "reset"]
+      },
+      "flutter": {
+        "Enabled": true,
+        "AllowAnyArguments": true
+      },
+      "dart": {
+        "Enabled": true,
+        "AllowAnyArguments": true
+      }
+    }
+  },
   "SessionSecurity": {
     "DefaultMode": "Locked",
     "DefaultLeaseMinutes": 30,

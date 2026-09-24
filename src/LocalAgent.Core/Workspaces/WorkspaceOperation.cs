@@ -7,5 +7,6 @@ public enum WorkspaceOperation
     Update,
     Move,
     Delete,
-    Restore
+    Restore,
+    Execute
 }

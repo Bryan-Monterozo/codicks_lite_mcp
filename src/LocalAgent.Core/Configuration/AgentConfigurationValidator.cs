@@ -24,6 +24,7 @@ public sealed class AgentConfigurationValidator(IUserPathResolver pathResolver)
         }
 
         ValidateSessionSecurity(configuration.SessionSecurity, errors);
+        ValidateExecution(configuration.Execution, errors);
         ValidateAgent(configuration.Agent, configFilePath, errors);
 
         return errors;
@@ -52,6 +53,97 @@ public sealed class AgentConfigurationValidator(IUserPathResolver pathResolver)
             options.OtpLifetimeMinutes,
             "SessionSecurity.OtpLifetimeMinutes",
             errors);
+    }
+
+    private static void ValidateExecution(
+        ExecutionOptions options,
+        List<string> errors)
+    {
+        AddPositiveError(
+            options.MaxTimeoutSeconds,
+            "Execution.MaxTimeoutSeconds",
+            errors);
+
+        AddPositiveError(
+            options.MaxOutputBytes,
+            "Execution.MaxOutputBytes",
+            errors);
+
+        foreach (var pair in options.Executables)
+        {
+            var executable = pair.Key;
+            var executableOptions = pair.Value;
+
+            if (string.IsNullOrWhiteSpace(executable))
+            {
+                errors.Add("Execution.Executables contains an empty executable name.");
+                continue;
+            }
+
+            if (Path.IsPathRooted(executable) ||
+                executable.Contains('/') ||
+                executable.Contains('\\'))
+            {
+                errors.Add(
+                    $"Execution executable '{executable}' must be a command name, not a path.");
+            }
+
+            if (executableOptions.MaxTimeoutSeconds is <= 0)
+            {
+                errors.Add(
+                    $"Execution.Executables['{executable}'].MaxTimeoutSeconds must be greater than zero when specified.");
+            }
+            else if (executableOptions.MaxTimeoutSeconds > options.MaxTimeoutSeconds)
+            {
+                errors.Add(
+                    $"Execution.Executables['{executable}'].MaxTimeoutSeconds cannot exceed Execution.MaxTimeoutSeconds.");
+            }
+
+            ValidateCommandList(
+                executable,
+                "AllowedCommands",
+                executableOptions.AllowedCommands,
+                errors);
+
+            ValidateCommandList(
+                executable,
+                "DeniedCommands",
+                executableOptions.DeniedCommands,
+                errors);
+
+            if (executableOptions.Enabled &&
+                !executableOptions.AllowAnyArguments &&
+                executableOptions.AllowedCommands.Count == 0)
+            {
+                errors.Add(
+                    $"Execution executable '{executable}' must allow at least one command when AllowAnyArguments is false.");
+            }
+        }
+    }
+
+    private static void ValidateCommandList(
+        string executable,
+        string propertyName,
+        List<string> commands,
+        List<string> errors)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var command in commands)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                errors.Add(
+                    $"Execution.Executables['{executable}'].{propertyName} contains an empty command.");
+                continue;
+            }
+
+            if (!seen.Add(command))
+            {
+                errors.Add(
+                    $"Execution.Executables['{executable}'].{propertyName} contains duplicate command '{command}'.");
+            }
+        }
     }
 
     private void ValidateAgent(AgentOptions agent, string configFilePath, List<string> errors)

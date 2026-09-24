@@ -11,6 +11,8 @@ public sealed class AgentConfiguration
     public AgentOptions Agent { get; set; } = new();
 
     public SessionSecurityOptions SessionSecurity { get; set; } = new();
+
+    public ExecutionOptions Execution { get; set; } = new();
 }
 
 public sealed class AgentOptions

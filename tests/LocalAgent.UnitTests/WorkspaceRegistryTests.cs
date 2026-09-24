@@ -27,7 +27,7 @@ public sealed class WorkspaceRegistryTests : IDisposable
                     {
                         Root = _workspaceRoot,
                         Enabled = true,
-                        AllowedOperations = ["read", "update"]
+                        AllowedOperations = ["read", "update", "execute"]
                     }
                 }
             }
@@ -41,6 +41,7 @@ public sealed class WorkspaceRegistryTests : IDisposable
         Assert.Equal(Path.GetFullPath(_workspaceRoot), resolved.Root);
         Assert.Contains(WorkspaceOperation.Read, resolved.AllowedOperations);
         Assert.Contains(WorkspaceOperation.Update, resolved.AllowedOperations);
+        Assert.Contains(WorkspaceOperation.Execute, resolved.AllowedOperations);
     }
 
     public void Dispose()

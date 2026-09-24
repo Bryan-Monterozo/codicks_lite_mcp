@@ -21,6 +21,18 @@ public sealed class WorkspacePermissionEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_AllowsConfiguredExecuteOperation()
+    {
+        var evaluator = new WorkspacePermissionEvaluator(new AgentConfiguration());
+        var workspace = CreateWorkspace(WorkspaceOperation.Execute);
+
+        var result = evaluator.Evaluate(workspace, WorkspaceOperation.Execute);
+
+        Assert.True(result.Allowed);
+        Assert.Equal(WorkspaceAccessError.None, result.Error);
+    }
+
+    [Fact]
     public void Evaluate_DeniesOperationNotConfiguredForWorkspace()
     {
         var evaluator = new WorkspacePermissionEvaluator(new AgentConfiguration());
