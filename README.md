@@ -55,6 +55,24 @@ After installation, `codicks-lite status` shows the local session state. Run `co
 
 This is an evolving project. The unit tests pass, while some older stdio integration tests still assume a writable session at startup and need updating for the locked-by-default session model. Review the configuration and test the access policy against your own folders before relying on it for important files.
 
+## Changelogs
+
+- Latest release: v1.1.1 (2026-09-24) skipped version on github init
+- v1.1 (2026-09-24)
+- v1.0 (2026-09-23)
+
+### v1.1.1 (2026-09-24): Added installer compiler and Bug Fix
+  - added installer compiler for easy distribution
+  - fixed chatgpt mcp connector creation error: security_status returning an anonymous object
+  - fixed cli security current status null
+
+### v1.1.0 (2026-09-24): MCP security status and session locking
+  - added session locking to MCP server via expiration and otp
+  - added manual session status and permission controls
+
+### v1.0.0 (2026-09-23): Initial release
+  - project initialization
+
 ## ADVERTISEMENT
 
 Also check out the better version of this project written in rust (first time rust development) [Codicks](https://https://github.com/Bryan-Monterozo/codicks-mcp-harness).
