@@ -2,6 +2,7 @@ using System.ComponentModel;
 using LocalAgent.Core.Audit;
 using LocalAgent.Core.Files;
 using LocalAgent.Core.Security;
+using LocalAgent.Infrastructure.Files;
 using ModelContextProtocol.Server;
 
 namespace LocalAgent.Host.Mcp;
@@ -130,6 +131,62 @@ public static class FileMutationTools
                 null,
                 null,
                 dryRun));
+    }
+
+    [McpServerTool(
+        Name = "file_patch_apply",
+        Title = "Apply reviewed workspace patch",
+        UseStructuredContent = true,
+        ReadOnly = false,
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false)]
+    [Description("Applies the exact unified patch previously reviewed by file_patch_preview. Requires mutation authorization, workspace Update permission, the reviewed base SHA-256, and the short-lived one-time review token. Uses the same backup and atomic replacement path as file_update.")]
+    public static FilePatchApplyResult FilePatchApply(
+        IWorkspacePatchApplyService applyService,
+        IAuditWriter auditWriter,
+        ISessionGuard sessionGuard,
+        [Description("Configured workspace id used during preview.")] string workspaceId,
+        [Description("Workspace-relative file path used during preview.")] string relativePath,
+        [Description("Exact unified patch text that was previewed.")] string patch,
+        [Description("Reviewed base SHA-256 used during preview.")] string expectedHash,
+        [Description("Short-lived review token returned by file_patch_preview.")] string reviewToken)
+    {
+        ArgumentNullException.ThrowIfNull(applyService);
+        ArgumentNullException.ThrowIfNull(auditWriter);
+        SessionAuthorization.RequireMutation(sessionGuard);
+
+        var result = applyService.Apply(
+            workspaceId,
+            relativePath,
+            patch,
+            expectedHash,
+            reviewToken);
+
+        var receipt =
+            ToolResultMapper.RequireValue(
+                result,
+                auditWriter,
+                new MutationAuditContext(
+                    "file_patch_apply",
+                    workspaceId,
+                    relativePath,
+                    relativePath,
+                    null,
+                    null,
+                    false));
+
+        return new FilePatchApplyResult(
+            receipt.RelativePath,
+            receipt.SizeBytes,
+            receipt.Sha256,
+            receipt.Encoding,
+            receipt.LineEnding,
+            receipt.BackupId,
+            ApplyState: "applied",
+            ApplySummary:
+                FileReviewSummaryFormatter.CreateApplySummary(
+                    receipt));
     }
 
     [McpServerTool(

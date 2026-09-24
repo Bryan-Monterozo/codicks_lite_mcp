@@ -109,6 +109,11 @@ internal static class ToolResultMapper
             FileQueryError.NotAFile => "UNSUPPORTED_FILE_TYPE",
             FileQueryError.NotADirectory => "UNSUPPORTED_FILE_TYPE",
             FileQueryError.UnsupportedTextEncoding => "UNSUPPORTED_FILE_TYPE",
+            FileQueryError.Conflict => "CONFLICT",
+            FileQueryError.FileTooLarge => "FILE_TOO_LARGE",
+            FileQueryError.InvalidPatch => "INVALID_PATCH",
+            FileQueryError.PatchConflict => "PATCH_CONFLICT",
+            FileQueryError.PatchTooLarge => "PATCH_TOO_LARGE",
             FileQueryError.IoError => "IO_ERROR",
             _ => "UNKNOWN_ERROR"
         };
@@ -142,6 +147,13 @@ internal static class ToolResultMapper
             FileMutationError.RecoveryUnavailable => "RECOVERY_REQUIRED",
             FileMutationError.MutationIdConflict => "CONFLICT",
             FileMutationError.MutationStateConflict => "CONFLICT",
+            FileMutationError.ReviewRequired => "REVIEW_REQUIRED",
+            FileMutationError.InvalidReviewToken => "INVALID_REVIEW_TOKEN",
+            FileMutationError.ExpiredReviewToken => "EXPIRED_REVIEW_TOKEN",
+            FileMutationError.ConsumedReviewToken => "CONSUMED_REVIEW_TOKEN",
+            FileMutationError.InvalidPatch => "INVALID_PATCH",
+            FileMutationError.PatchConflict => "PATCH_CONFLICT",
+            FileMutationError.PatchTooLarge => "PATCH_TOO_LARGE",
             _ => "UNKNOWN_ERROR"
         };
     }

@@ -86,6 +86,62 @@ public static class FileQueryTools
     }
 
     [McpServerTool(
+        Name = "file_diff",
+        Title = "Preview workspace file diff",
+        UseStructuredContent = true,
+        ReadOnly = true,
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false)]
+    [Description("Compares an approved workspace text file with proposed complete replacement content without modifying the file. Returns a bounded unified diff, structured hunks, and base/proposed SHA-256 values.")]
+    public static FileDiffResult FileDiff(
+        IWorkspaceDiffService diffService,
+        ISessionGuard sessionGuard,
+        [Description("Configured workspace id.")] string workspaceId,
+        [Description("Workspace-relative regular text file path.")] string relativePath,
+        [Description("Proposed complete replacement text. The preview follows file_update encoding and line-ending preservation rules.")] string content,
+        [Description("Optional SHA-256 from a prior read. If supplied and stale, the preview fails with CONFLICT.")] string? expectedHash = null)
+    {
+        ArgumentNullException.ThrowIfNull(diffService);
+        SessionAuthorization.RequireRead(sessionGuard);
+
+        return ToolResultMapper.RequireValue(
+            diffService.DiffText(
+                workspaceId,
+                relativePath,
+                content,
+                expectedHash));
+    }
+
+    [McpServerTool(
+        Name = "file_patch_preview",
+        Title = "Preview workspace unified patch",
+        UseStructuredContent = true,
+        ReadOnly = true,
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false)]
+    [Description("Validates and applies one strict unified-diff patch entirely in memory against an approved workspace text file, then returns the canonical review diff without modifying the file.")]
+    public static FilePatchPreviewResult FilePatchPreview(
+        IWorkspacePatchPreviewService previewService,
+        ISessionGuard sessionGuard,
+        [Description("Configured workspace id.")] string workspaceId,
+        [Description("Workspace-relative regular text file path. Patch headers must target this exact file.")] string relativePath,
+        [Description("Strict one-file unified diff containing ---/+++ headers and zero or more @@ hunks. Git rename/mode/binary metadata and fuzzy hunk placement are not supported.")] string patch,
+        [Description("Required SHA-256 of the current file bytes from a prior file_read/file_diff result.")] string expectedHash)
+    {
+        ArgumentNullException.ThrowIfNull(previewService);
+        SessionAuthorization.RequireRead(sessionGuard);
+
+        return ToolResultMapper.RequireValue(
+            previewService.Preview(
+                workspaceId,
+                relativePath,
+                patch,
+                expectedHash));
+    }
+
+    [McpServerTool(
         Name = "file_search",
         Title = "Search workspace text",
         UseStructuredContent = true,

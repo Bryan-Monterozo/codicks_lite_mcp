@@ -18,5 +18,12 @@ public enum FileMutationError
     RecoveryNotFound,
     RecoveryUnavailable,
     MutationIdConflict,
-    MutationStateConflict
+    MutationStateConflict,
+    ReviewRequired,
+    InvalidReviewToken,
+    ExpiredReviewToken,
+    ConsumedReviewToken,
+    InvalidPatch,
+    PatchConflict,
+    PatchTooLarge
 }

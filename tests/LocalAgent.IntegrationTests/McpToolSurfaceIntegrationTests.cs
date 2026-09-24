@@ -91,6 +91,9 @@ public sealed class McpToolSurfaceIntegrationTests : IDisposable
             "file_move",
             "file_delete",
             "file_restore",
+            "file_diff",
+            "file_patch_preview",
+            "file_patch_apply",
             "process_exec"
         };
 

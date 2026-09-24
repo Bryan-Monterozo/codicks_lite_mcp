@@ -9,5 +9,10 @@ public enum FileQueryError
     NotAFile,
     NotADirectory,
     UnsupportedTextEncoding,
+    Conflict,
+    FileTooLarge,
+    InvalidPatch,
+    PatchConflict,
+    PatchTooLarge,
     IoError
 }

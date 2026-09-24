@@ -93,6 +93,14 @@ builder.Services.AddSingleton<IProcessExecutionService, ProcessExecutionRouter>(
 // Chunk 04 read-only service.
 builder.Services.AddSingleton<IWorkspaceQueryService, WorkspaceQueryService>();
 
+// v1.2 diff and patch-preview services.
+builder.Services.AddSingleton<IFileDiffService, FileDiffService>();
+builder.Services.AddSingleton<IWorkspaceDiffService, WorkspaceDiffService>();
+builder.Services.AddSingleton<IUnifiedPatchService, UnifiedPatchService>();
+builder.Services.AddSingleton<IFilePatchReviewStore, MemoryFilePatchReviewStore>();
+builder.Services.AddSingleton<IWorkspacePatchPreviewService, WorkspacePatchPreviewService>();
+builder.Services.AddSingleton<IWorkspacePatchApplyService, WorkspacePatchApplyService>();
+
 // Chunk 05 create/update services.
 builder.Services.AddSingleton<IFileHasher, Sha256FileHasher>();
 builder.Services.AddSingleton<IAtomicFileWriter, AtomicFileWriter>();

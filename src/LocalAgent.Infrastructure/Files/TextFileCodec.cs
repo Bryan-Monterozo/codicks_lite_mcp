@@ -106,7 +106,7 @@ internal static class TextFileCodec
         }
     }
 
-    private static DecodedTextResult DecodeExisting(byte[] bytes)
+    internal static DecodedTextResult DecodeExisting(byte[] bytes)
     {
         if (bytes.Length >= 2 &&
             bytes[0] == 0xFF &&
@@ -243,7 +243,7 @@ internal static class TextFileCodec
             new(false, [], string.Empty, string.Empty, message);
     }
 
-    private sealed record DecodedTextResult(
+    internal sealed record DecodedTextResult(
         bool Success,
         string Content,
         bool HasUtf8Bom,

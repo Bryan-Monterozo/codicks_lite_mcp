@@ -1,9 +1,17 @@
+using System.Text.Json.Serialization;
+
 namespace LocalAgent.Core.Files;
 
+[JsonConverter(typeof(JsonStringEnumConverter<FileDiffLineKind>))]
 public enum FileDiffLineKind
 {
+    [JsonStringEnumMemberName("context")]
     Context,
+
+    [JsonStringEnumMemberName("add")]
     Addition,
+
+    [JsonStringEnumMemberName("delete")]
     Deletion
 }
 
@@ -42,4 +50,6 @@ public sealed record FileDiffResult(
     string SourceLineEnding,
     string ProposedLineEnding,
     bool Truncated,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    string ReviewState = "preview",
+    string ReviewSummary = "");
