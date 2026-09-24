@@ -90,7 +90,8 @@ public sealed class McpToolSurfaceIntegrationTests : IDisposable
             "file_update",
             "file_move",
             "file_delete",
-            "file_restore"
+            "file_restore",
+            "process_exec"
         };
 
         foreach (var expectedTool in expectedTools)

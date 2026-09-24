@@ -22,9 +22,26 @@ internal sealed class TestSessionUnlocker
             $"cdx-{prefix}-{Guid.NewGuid():N}"[..17]);
     }
 
-    public async Task UnlockFullAsync(
+    public Task UnlockFullAsync(
         string stateRoot,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        UnlockAsync(
+            stateRoot,
+            "Full",
+            cancellationToken);
+
+    public Task UnlockReadOnlyAsync(
+        string stateRoot,
+        CancellationToken cancellationToken = default) =>
+        UnlockAsync(
+            stateRoot,
+            "ReadOnly",
+            cancellationToken);
+
+    private async Task UnlockAsync(
+        string stateRoot,
+        string mode,
+        CancellationToken cancellationToken)
     {
         if (!OperatingSystem.IsMacOS())
         {
@@ -76,7 +93,7 @@ internal sealed class TestSessionUnlocker
         var request = JsonSerializer.Serialize(new
         {
             action = "unlock",
-            mode = "Full",
+            mode,
             otp,
             leaseMinutes = 30
         });

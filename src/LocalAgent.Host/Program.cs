@@ -1,5 +1,6 @@
 using LocalAgent.Core.Audit;
 using LocalAgent.Core.Configuration;
+using LocalAgent.Core.Execution;
 using LocalAgent.Core.Files;
 using LocalAgent.Core.Paths;
 using LocalAgent.Core.Recovery;
@@ -7,6 +8,7 @@ using LocalAgent.Core.Security;
 using LocalAgent.Core.Workspaces;
 using LocalAgent.Host.Configuration;
 using LocalAgent.Infrastructure.Audit;
+using LocalAgent.Infrastructure.Execution;
 using LocalAgent.Infrastructure.FileSystem;
 using LocalAgent.Infrastructure.Files;
 using LocalAgent.Infrastructure.Paths;
@@ -81,6 +83,10 @@ builder.Services.AddSingleton<IDenyPathMatcher>(serviceProvider =>
 
 builder.Services.AddSingleton<IFileSystemEntryInspector, MacOsFileSystemEntryInspector>();
 builder.Services.AddSingleton<IWorkspacePathPolicy, WorkspacePathPolicy>();
+
+// Local command execution policy/runner. Exposed through MCP in Part 3.
+builder.Services.AddSingleton<IExecutablePolicy, ExecutablePolicy>();
+builder.Services.AddSingleton<IProcessExecutionService, HostProcessExecutionService>();
 
 // Chunk 04 read-only service.
 builder.Services.AddSingleton<IWorkspaceQueryService, WorkspaceQueryService>();

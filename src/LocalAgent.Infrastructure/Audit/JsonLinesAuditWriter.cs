@@ -18,7 +18,18 @@ public sealed class JsonLinesAuditWriter(
     public bool TryWrite(OperationAuditRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);
+        return TryWriteCore(record);
+    }
 
+    public bool TryWrite(ProcessExecutionAuditRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return TryWriteCore(record);
+    }
+
+    private bool TryWriteCore<T>(T record)
+        where T : class
+    {
         try
         {
             lock (_sync)
@@ -39,7 +50,10 @@ public sealed class JsonLinesAuditWriter(
                     bufferSize: 16_384,
                     FileOptions.WriteThrough);
 
-                JsonSerializer.Serialize(stream, record);
+                JsonSerializer.Serialize(
+                    stream,
+                    record);
+
                 stream.WriteByte((byte)'\n');
                 stream.Flush(flushToDisk: true);
             }

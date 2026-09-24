@@ -17,7 +17,9 @@ public enum ProcessExecutionError
     InvalidWorkingDirectory,
     TimeoutOutOfRange,
     OutputLimitOutOfRange,
-    UnsupportedExecutionMode
+    UnsupportedExecutionMode,
+    WorkspaceNotFound,
+    ProcessStartFailed
 }
 
 public sealed record ProcessExecutionRequest(
@@ -75,6 +77,14 @@ public interface IExecutablePolicy
     ExecutionPolicyDecision Evaluate(
         LocalAgent.Core.Workspaces.WorkspaceDescriptor workspace,
         ProcessExecutionRequest request);
+}
+
+public sealed class ProcessExecutionException(
+    ProcessExecutionError error,
+    string message,
+    Exception? innerException = null) : Exception(message, innerException)
+{
+    public ProcessExecutionError Error { get; } = error;
 }
 
 public interface IProcessExecutionService
