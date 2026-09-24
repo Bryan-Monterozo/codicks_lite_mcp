@@ -96,6 +96,55 @@ public sealed class ExecutionConfigurationValidatorTests : IDisposable
                 StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Validate_RejectsInvalidSandboxConfiguration()
+    {
+        var configuration = CreateValidConfiguration();
+
+        configuration.Execution.Sandbox =
+            new SandboxExecutionOptions
+            {
+                Enabled = true,
+                RuntimeExecutable = "",
+                Image = "",
+                CpuCount = 0,
+                MemoryMegabytes = 0,
+                TmpfsMegabytes = 0
+            };
+
+        var errors = Validate(configuration);
+
+        Assert.Contains(
+            errors,
+            error => error.Contains(
+                "Execution.Sandbox.RuntimeExecutable",
+                StringComparison.Ordinal));
+
+        Assert.Contains(
+            errors,
+            error => error.Contains(
+                "Execution.Sandbox.Image",
+                StringComparison.Ordinal));
+
+        Assert.Contains(
+            errors,
+            error => error.Contains(
+                "Execution.Sandbox.CpuCount",
+                StringComparison.Ordinal));
+
+        Assert.Contains(
+            errors,
+            error => error.Contains(
+                "Execution.Sandbox.MemoryMegabytes",
+                StringComparison.Ordinal));
+
+        Assert.Contains(
+            errors,
+            error => error.Contains(
+                "Execution.Sandbox.TmpfsMegabytes",
+                StringComparison.Ordinal));
+    }
+
     private IReadOnlyList<string> Validate(
         AgentConfiguration configuration)
     {

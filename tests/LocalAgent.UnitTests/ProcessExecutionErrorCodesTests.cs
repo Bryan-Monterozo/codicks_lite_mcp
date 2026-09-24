@@ -17,6 +17,8 @@ public sealed class ProcessExecutionErrorCodesTests
     [InlineData(ProcessExecutionError.UnsupportedExecutionMode, "UNSUPPORTED_EXECUTION_MODE")]
     [InlineData(ProcessExecutionError.WorkspaceNotFound, "WORKSPACE_NOT_FOUND")]
     [InlineData(ProcessExecutionError.ProcessStartFailed, "PROCESS_START_FAILED")]
+    [InlineData(ProcessExecutionError.SandboxDisabled, "SANDBOX_DISABLED")]
+    [InlineData(ProcessExecutionError.SandboxUnavailable, "SANDBOX_UNAVAILABLE")]
     public void From_ReturnsStableCode(
         ProcessExecutionError error,
         string expected)

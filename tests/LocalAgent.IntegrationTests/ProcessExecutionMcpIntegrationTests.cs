@@ -176,6 +176,17 @@ public sealed class ProcessExecutionMcpIntegrationTests : IDisposable
             invalidWorkspace,
             "WORKSPACE_NOT_FOUND");
 
+        var sandboxDisabled = await CallProcessExecAsync(
+            client,
+            "exec",
+            "dotnet",
+            ["--version"],
+            executionMode: "Sandbox");
+
+        AssertToolErrorContains(
+            sandboxDisabled,
+            "SANDBOX_DISABLED");
+
         var traversal = await CallProcessExecAsync(
             client,
             "exec",
@@ -574,7 +585,8 @@ public sealed class ProcessExecutionMcpIntegrationTests : IDisposable
         string[] arguments,
         string relativeWorkingDirectory = "",
         int? timeoutSeconds = null,
-        int? maxOutputBytes = null) =>
+        int? maxOutputBytes = null,
+        string executionMode = "Host") =>
         client.CallToolAsync(
             "process_exec",
             new Dictionary<string, object?>
@@ -586,7 +598,7 @@ public sealed class ProcessExecutionMcpIntegrationTests : IDisposable
                     relativeWorkingDirectory,
                 ["timeoutSeconds"] = timeoutSeconds,
                 ["maxOutputBytes"] = maxOutputBytes,
-                ["executionMode"] = "Host"
+                ["executionMode"] = executionMode
             },
             cancellationToken:
                 CancellationToken.None);

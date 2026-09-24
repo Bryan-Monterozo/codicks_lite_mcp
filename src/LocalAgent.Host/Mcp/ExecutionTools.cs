@@ -31,7 +31,7 @@ public static class ExecutionTools
         [Description("Workspace-relative existing directory. Use an empty string for the workspace root.")] string relativeWorkingDirectory = "",
         [Description("Optional timeout in seconds, bounded by execution policy.")] int? timeoutSeconds = null,
         [Description("Optional stdout/stderr retention limit in bytes per stream, bounded by execution policy.")] int? maxOutputBytes = null,
-        [Description("Execution mode. Part 3 supports 'Host' only.")] string executionMode = "Host",
+        [Description("Execution mode: 'Host' for native macOS execution or 'Sandbox' for the configured isolated container backend.")] string executionMode = "Host",
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(executionService);

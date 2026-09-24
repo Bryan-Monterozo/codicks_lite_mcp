@@ -50,16 +50,16 @@ Packages are written to:
 
 ```text
 installers/dist/
-├── codicks-lite-1.1.0-macos-arm64.tar.gz
-├── codicks-lite-1.1.0-macos-arm64.sha256
-├── codicks-lite-1.1.0-macos-x64.tar.gz
-└── codicks-lite-1.1.0-macos-x64.sha256
+├── codicks-lite-1.2.0-macos-arm64.tar.gz
+├── codicks-lite-1.2.0-macos-arm64.sha256
+├── codicks-lite-1.2.0-macos-x64.tar.gz
+└── codicks-lite-1.2.0-macos-x64.sha256
 ```
 
 Each archive contains:
 
 ```text
-codicks-lite-1.1.0-macos-<arch>/
+codicks-lite-1.2.0-macos-<arch>/
 ├── install
 ├── app/                  # compiled self-contained publish output
 ├── tools/
@@ -77,8 +77,8 @@ SDK/runtime because the published app is self-contained.
 ## Recipient installation
 
 ```bash
-tar -xzf codicks-lite-1.1.0-macos-arm64.tar.gz
-cd codicks-lite-1.1.0-macos-arm64
+tar -xzf codicks-lite-1.2.0-macos-arm64.tar.gz
+cd codicks-lite-1.2.0-macos-arm64
 ./install
 ```
 

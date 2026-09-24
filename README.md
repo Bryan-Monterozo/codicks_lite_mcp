@@ -57,9 +57,14 @@ This is an evolving project. The unit tests pass, while some older stdio integra
 
 ## Changelogs
 
-- Latest release: v1.1.1 (2026-09-24) skipped version on github init
-- v1.1 (2026-09-24)
-- v1.0 (2026-09-23)
+- Latest release: v1.2.0 (2026-09-24) 
+- v1.1.1 (2026-09-24) init version on github init
+- v1.1.0 (2026-09-24)
+- v1.0.0 (2026-09-23)
+
+### v1.2.0 (2026-09-24): Process executions and [EXPERIMENTAL] Sandbox executions
+  - added 2 execution mcp-tools: host and sandbox process_exec
+  - unimplemented file diff and review functionality
 
 ### v1.1.1 (2026-09-24): Added installer compiler and Bug Fix
   - added installer compiler for easy distribution

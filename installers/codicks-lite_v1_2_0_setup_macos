@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CODICKS_LITE_VERSION="1.1.1"
+CODICKS_LITE_VERSION="1.2.0"
 
 PACKAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_PAYLOAD="$PACKAGE_ROOT/app"
@@ -33,7 +33,7 @@ fail() { printf '\nERROR: %s\n' "$1" >&2; exit 1; }
 
 usage() {
   cat <<'EOF'
-Codicks Lite MCP 1.1.0 macOS package installer
+Codicks Lite MCP 1.2.0 macOS package installer
 
 Usage:
   ./install [--configure]
@@ -56,7 +56,7 @@ parse_args() {
 
 ensure_package() {
   [[ "$(uname -s)" == "Darwin" ]] || fail "This package supports macOS only."
-  [[ -d "$APP_PAYLOAD" ]] || fail "Missing compiled app payload. Build this package with build_codicks-lite_v1_1_1_release_macos first."
+  [[ -d "$APP_PAYLOAD" ]] || fail "Missing compiled app payload. Build this package with build_codicks-lite_v1_2_0_release_macos first."
   [[ -x "$APP_PAYLOAD/LocalAgent.Host" ]] || fail "Compiled self-contained LocalAgent.Host executable is missing."
   [[ -f "$TOOLS_PAYLOAD/codicks-lite-control" ]] || fail "Missing codicks-lite-control payload."
   [[ -f "$TOOLS_PAYLOAD/setup_config.sh" ]] || fail "Missing setup_config.sh payload."
@@ -271,6 +271,12 @@ doctor_local() {
     echo "[OK] tunnel-client: $(command -v tunnel-client)"
   else
     echo "[INFO] tunnel-client not on PATH"
+  fi
+
+  if command -v container >/dev/null 2>&1; then
+    echo "[OK] Apple container runtime: $(command -v container)"
+  else
+    echo "[INFO] Apple container runtime not installed; Sandbox execution unavailable"
   fi
 
   return $failed

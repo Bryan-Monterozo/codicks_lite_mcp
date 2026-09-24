@@ -20,6 +20,8 @@ public static class ProcessExecutionErrorCodes
             ProcessExecutionError.UnsupportedExecutionMode => "UNSUPPORTED_EXECUTION_MODE",
             ProcessExecutionError.WorkspaceNotFound => "WORKSPACE_NOT_FOUND",
             ProcessExecutionError.ProcessStartFailed => "PROCESS_START_FAILED",
+            ProcessExecutionError.SandboxDisabled => "SANDBOX_DISABLED",
+            ProcessExecutionError.SandboxUnavailable => "SANDBOX_UNAVAILABLE",
             _ => GenericExecutionError
         };
 }

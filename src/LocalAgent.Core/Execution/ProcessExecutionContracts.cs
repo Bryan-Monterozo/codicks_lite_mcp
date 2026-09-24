@@ -19,7 +19,9 @@ public enum ProcessExecutionError
     OutputLimitOutOfRange,
     UnsupportedExecutionMode,
     WorkspaceNotFound,
-    ProcessStartFailed
+    ProcessStartFailed,
+    SandboxDisabled,
+    SandboxUnavailable
 }
 
 public sealed record ProcessExecutionRequest(

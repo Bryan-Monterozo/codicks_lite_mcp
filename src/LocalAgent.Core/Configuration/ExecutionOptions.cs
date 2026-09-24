@@ -10,6 +10,8 @@ public sealed class ExecutionOptions
 
     public Dictionary<string, ExecutableExecutionOptions> Executables { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
+
+    public SandboxExecutionOptions Sandbox { get; set; } = new();
 }
 
 public sealed class ExecutableExecutionOptions
@@ -23,4 +25,24 @@ public sealed class ExecutableExecutionOptions
     public List<string> DeniedCommands { get; set; } = [];
 
     public int? MaxTimeoutSeconds { get; set; }
+}
+
+
+public sealed class SandboxExecutionOptions
+{
+    public bool Enabled { get; set; }
+
+    public string RuntimeExecutable { get; set; } = "container";
+
+    public string Image { get; set; } = "mcr.microsoft.com/dotnet/sdk:10.0";
+
+    public int CpuCount { get; set; } = 2;
+
+    public int MemoryMegabytes { get; set; } = 2_048;
+
+    public int TmpfsMegabytes { get; set; } = 256;
+
+    public bool ReadOnlyRoot { get; set; } = true;
+
+    public bool NetworkEnabled { get; set; }
 }

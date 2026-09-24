@@ -62,13 +62,24 @@
       "dotnet": {
         "Enabled": true,
         "AllowAnyArguments": false,
-        "AllowedCommands": ["build", "test", "restore"]
+        "AllowedCommands": [
+          "build",
+          "test",
+          "restore"
+        ]
       },
       "git": {
         "Enabled": true,
         "AllowAnyArguments": false,
-        "AllowedCommands": ["status", "diff", "log"],
-        "DeniedCommands": ["push", "reset"]
+        "AllowedCommands": [
+          "status",
+          "diff",
+          "log"
+        ],
+        "DeniedCommands": [
+          "push",
+          "reset"
+        ]
       },
       "flutter": {
         "Enabled": true,
@@ -78,6 +89,16 @@
         "Enabled": true,
         "AllowAnyArguments": true
       }
+    },
+    "Sandbox": {
+      "Enabled": false,
+      "RuntimeExecutable": "container",
+      "Image": "mcr.microsoft.com/dotnet/sdk:10.0",
+      "CpuCount": 2,
+      "MemoryMegabytes": 2048,
+      "TmpfsMegabytes": 256,
+      "ReadOnlyRoot": true,
+      "NetworkEnabled": false
     }
   },
   "SessionSecurity": {

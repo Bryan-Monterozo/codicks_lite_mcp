@@ -290,12 +290,12 @@ public sealed class ExecutablePolicyTests
     }
 
     [Fact]
-    public void Evaluate_RejectsUnsupportedSandboxMode()
+    public void Evaluate_SandboxMode_RequiresSandboxEnabled()
     {
         var configuration = CreateConfiguration();
         var policy = CreatePolicy(configuration);
 
-        var result = policy.Evaluate(
+        var denied = policy.Evaluate(
             CreateWorkspace(WorkspaceOperation.Execute),
             new ProcessExecutionRequest(
                 "demo",
@@ -303,9 +303,23 @@ public sealed class ExecutablePolicyTests
                 ["test"],
                 ExecutionMode: ExecutionMode.Sandbox));
 
+        Assert.False(denied.Allowed);
         Assert.Equal(
-            ProcessExecutionError.UnsupportedExecutionMode,
-            result.Error);
+            ProcessExecutionError.SandboxDisabled,
+            denied.Error);
+
+        configuration.Execution.Sandbox.Enabled = true;
+        policy = CreatePolicy(configuration);
+
+        var allowed = policy.Evaluate(
+            CreateWorkspace(WorkspaceOperation.Execute),
+            new ProcessExecutionRequest(
+                "demo",
+                "dotnet",
+                ["test"],
+                ExecutionMode: ExecutionMode.Sandbox));
+
+        Assert.True(allowed.Allowed);
     }
 
     [Fact]

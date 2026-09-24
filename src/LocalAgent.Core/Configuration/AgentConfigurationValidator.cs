@@ -69,6 +69,10 @@ public sealed class AgentConfigurationValidator(IUserPathResolver pathResolver)
             "Execution.MaxOutputBytes",
             errors);
 
+        ValidateSandboxExecution(
+            options.Sandbox,
+            errors);
+
         foreach (var pair in options.Executables)
         {
             var executable = pair.Key;
@@ -119,6 +123,40 @@ public sealed class AgentConfigurationValidator(IUserPathResolver pathResolver)
                     $"Execution executable '{executable}' must allow at least one command when AllowAnyArguments is false.");
             }
         }
+    }
+
+    private static void ValidateSandboxExecution(
+        SandboxExecutionOptions sandbox,
+        List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(
+                sandbox.RuntimeExecutable))
+        {
+            errors.Add(
+                "Execution.Sandbox.RuntimeExecutable is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                sandbox.Image))
+        {
+            errors.Add(
+                "Execution.Sandbox.Image is required.");
+        }
+
+        AddPositiveError(
+            sandbox.CpuCount,
+            "Execution.Sandbox.CpuCount",
+            errors);
+
+        AddPositiveError(
+            sandbox.MemoryMegabytes,
+            "Execution.Sandbox.MemoryMegabytes",
+            errors);
+
+        AddPositiveError(
+            sandbox.TmpfsMegabytes,
+            "Execution.Sandbox.TmpfsMegabytes",
+            errors);
     }
 
     private static void ValidateCommandList(

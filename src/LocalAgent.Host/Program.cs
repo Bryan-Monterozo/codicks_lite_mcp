@@ -84,9 +84,11 @@ builder.Services.AddSingleton<IDenyPathMatcher>(serviceProvider =>
 builder.Services.AddSingleton<IFileSystemEntryInspector, MacOsFileSystemEntryInspector>();
 builder.Services.AddSingleton<IWorkspacePathPolicy, WorkspacePathPolicy>();
 
-// Local command execution policy/runner. Exposed through MCP in Part 3.
+// Local command execution policy/runners.
 builder.Services.AddSingleton<IExecutablePolicy, ExecutablePolicy>();
-builder.Services.AddSingleton<IProcessExecutionService, HostProcessExecutionService>();
+builder.Services.AddSingleton<HostProcessExecutionService>();
+builder.Services.AddSingleton<SandboxProcessExecutionService>();
+builder.Services.AddSingleton<IProcessExecutionService, ProcessExecutionRouter>();
 
 // Chunk 04 read-only service.
 builder.Services.AddSingleton<IWorkspaceQueryService, WorkspaceQueryService>();

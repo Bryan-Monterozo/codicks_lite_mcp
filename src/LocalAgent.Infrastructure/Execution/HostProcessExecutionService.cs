@@ -29,6 +29,13 @@ public sealed class HostProcessExecutionService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.ExecutionMode != ExecutionMode.Host)
+        {
+            throw new ProcessExecutionException(
+                ProcessExecutionError.UnsupportedExecutionMode,
+                $"Host execution service cannot run mode '{request.ExecutionMode}'.");
+        }
+
         var resolution = workspaceResolver.Resolve(request.WorkspaceId);
         if (!resolution.Resolved || resolution.Workspace is null)
         {

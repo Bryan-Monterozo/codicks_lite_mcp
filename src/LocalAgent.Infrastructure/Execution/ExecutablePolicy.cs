@@ -71,11 +71,20 @@ public sealed class ExecutablePolicy : IExecutablePolicy
                 workspacePermission.Message);
         }
 
-        if (request.ExecutionMode != ExecutionMode.Host)
+        if (request.ExecutionMode == ExecutionMode.Sandbox &&
+            !_options.Sandbox.Enabled)
+        {
+            return Deny(
+                ProcessExecutionError.SandboxDisabled,
+                "Sandbox execution is disabled.");
+        }
+
+        if (request.ExecutionMode is not
+            (ExecutionMode.Host or ExecutionMode.Sandbox))
         {
             return Deny(
                 ProcessExecutionError.UnsupportedExecutionMode,
-                $"Execution mode '{request.ExecutionMode}' is not supported yet.");
+                $"Execution mode '{request.ExecutionMode}' is not supported.");
         }
 
         if (request.Executable.Contains('/') ||
