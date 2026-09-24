@@ -37,6 +37,7 @@ docs/
 installers/dist/
 codicks_lite_macos_mcp_v1.md
 chunked/
+.codicks/
 
 # Temporary files
 *.tmp
