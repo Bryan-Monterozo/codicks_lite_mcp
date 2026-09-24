@@ -11,9 +11,8 @@ namespace LocalAgent.IntegrationTests;
 
 public sealed class McpToolSurfaceIntegrationTests : IDisposable
 {
-    private readonly string _root = Path.Combine(
-        Path.GetTempPath(),
-        $"codicks-lite-chunk07-integration-{Guid.NewGuid():N}");
+    private readonly string _root =
+        TestSessionUnlocker.CreateShortRoot("c07");
 
     [Fact]
     public async Task Chunk07_AdvertisesAndExecutesCompleteToolSurface()
@@ -60,6 +59,7 @@ public sealed class McpToolSurfaceIntegrationTests : IDisposable
             """);
 
         var hostAssembly = typeof(HostMarker).Assembly.Location;
+        var sessionUnlocker = new TestSessionUnlocker();
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
             Name = "codicks-lite-chunk07-tools-integration",
@@ -69,10 +69,12 @@ public sealed class McpToolSurfaceIntegrationTests : IDisposable
             {
                 ["CODICKS_LITE_CONFIG_FILE"] = configPath,
                 [ScratchProbeService.ScratchDirectoryEnvironmentVariable] = scratchDirectory
-            }
+            },
+            StandardErrorLines = sessionUnlocker.StandardErrorLines
         });
 
         await using var client = await McpClient.CreateAsync(transport);
+        await sessionUnlocker.UnlockFullAsync(stateRoot);
 
         var tools = await client.ListToolsAsync();
         var expectedTools = new[]

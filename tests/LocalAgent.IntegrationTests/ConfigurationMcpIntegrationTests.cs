@@ -7,9 +7,8 @@ namespace LocalAgent.IntegrationTests;
 
 public sealed class ConfigurationMcpIntegrationTests : IDisposable
 {
-    private readonly string _root = Path.Combine(
-        Path.GetTempPath(),
-        $"codicks-lite-chunk02-integration-{Guid.NewGuid():N}");
+    private readonly string _root =
+        TestSessionUnlocker.CreateShortRoot("cfg");
 
     [Fact]
     public async Task ServerInfo_ReflectsExternalConfigurationAfterRestart()

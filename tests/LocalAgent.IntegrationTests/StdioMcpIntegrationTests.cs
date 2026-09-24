@@ -8,9 +8,8 @@ namespace LocalAgent.IntegrationTests;
 
 public sealed class StdioMcpIntegrationTests : IDisposable
 {
-    private readonly string _scratchDirectory = Path.Combine(
-        Path.GetTempPath(),
-        $"codicks-lite-chunk01-integration-{Guid.NewGuid():N}");
+    private readonly string _scratchDirectory =
+        TestSessionUnlocker.CreateShortRoot("c01");
 
     [Fact]
     public async Task Host_AdvertisesTools_AndExecutesScratchProbe()
@@ -18,6 +17,8 @@ public sealed class StdioMcpIntegrationTests : IDisposable
         Directory.CreateDirectory(_scratchDirectory);
         var hostAssembly = typeof(HostMarker).Assembly.Location;
         var isolatedConfigPath = Path.Combine(_scratchDirectory, "missing-agent.json");
+        var stateRoot = Path.Combine(_scratchDirectory, "state");
+        var sessionUnlocker = new TestSessionUnlocker();
 
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
@@ -27,11 +28,14 @@ public sealed class StdioMcpIntegrationTests : IDisposable
             EnvironmentVariables = new Dictionary<string, string?>
             {
                 [ScratchProbeService.ScratchDirectoryEnvironmentVariable] = _scratchDirectory,
-                ["CODICKS_LITE_CONFIG_FILE"] = isolatedConfigPath
-            }
+                ["CODICKS_LITE_CONFIG_FILE"] = isolatedConfigPath,
+                ["CODICKS_LITE_Agent__StateDirectory"] = stateRoot
+            },
+            StandardErrorLines = sessionUnlocker.StandardErrorLines
         });
 
         await using var client = await McpClient.CreateAsync(transport);
+        await sessionUnlocker.UnlockFullAsync(stateRoot);
 
         var tools = await client.ListToolsAsync();
         Assert.Contains(tools, tool => tool.Name == "server_info");

@@ -11,9 +11,8 @@ namespace LocalAgent.IntegrationTests;
 
 public sealed class Chunk09McpHardeningIntegrationTests : IDisposable
 {
-    private readonly string _root = Path.Combine(
-        Path.GetTempPath(),
-        $"codicks-lite-chunk09-mcp-{Guid.NewGuid():N}");
+    private readonly string _root =
+        TestSessionUnlocker.CreateShortRoot("c09");
 
     [Fact]
     [Trait("Chunk", "09")]
@@ -72,6 +71,7 @@ public sealed class Chunk09McpHardeningIntegrationTests : IDisposable
             """);
 
         var hostAssembly = typeof(HostMarker).Assembly.Location;
+        var sessionUnlocker = new TestSessionUnlocker();
         var transport = new StdioClientTransport(
             new StdioClientTransportOptions
             {
@@ -84,11 +84,13 @@ public sealed class Chunk09McpHardeningIntegrationTests : IDisposable
                         ["CODICKS_LITE_CONFIG_FILE"] = configPath,
                         [ScratchProbeService.ScratchDirectoryEnvironmentVariable] =
                             scratchDirectory
-                    }
+                    },
+                StandardErrorLines = sessionUnlocker.StandardErrorLines
             });
 
         await using var client =
             await McpClient.CreateAsync(transport);
+        await sessionUnlocker.UnlockFullAsync(stateRoot);
 
         var tools = await client.ListToolsAsync();
         var expectedTools = new[]
