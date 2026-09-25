@@ -13,6 +13,7 @@ using LocalAgent.Infrastructure.Execution;
 using LocalAgent.Infrastructure.FileSystem;
 using LocalAgent.Infrastructure.Files;
 using LocalAgent.Infrastructure.Paths;
+using LocalAgent.Infrastructure.Platform;
 using LocalAgent.Infrastructure.Recovery;
 using LocalAgent.Infrastructure.Scratch;
 using LocalAgent.Infrastructure.Security;
@@ -25,7 +26,13 @@ using ModelContextProtocol.Server;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-var configurationRuntimeInfo = ConfigurationBootstrap.Configure(builder.Configuration);
+var platformApplicationPaths =
+    PlatformApplicationPaths.CreateCurrent();
+
+var configurationRuntimeInfo =
+    ConfigurationBootstrap.Configure(
+        builder.Configuration,
+        platformApplicationPaths);
 
 // stdio is the MCP transport. Never write application logs to stdout.
 builder.Logging.ClearProviders();
@@ -82,7 +89,9 @@ builder.Services.AddSingleton<IDenyPathMatcher>(serviceProvider =>
     return new DenyPathMatcher(denyGlobs);
 });
 
-builder.Services.AddSingleton<IFileSystemEntryInspector, MacOsFileSystemEntryInspector>();
+builder.Services.AddCodicksPlatformServices(
+    platformApplicationPaths);
+
 builder.Services.AddSingleton<IWorkspacePathPolicy, WorkspacePathPolicy>();
 
 // Local command execution policy/runners.
@@ -110,7 +119,6 @@ builder.Services.AddSingleton<IUpdateBackupManagementService, UpdateBackupManage
 builder.Services.AddSingleton<IWorkspaceMutationService, WorkspaceMutationService>();
 
 // Chunk 06 lifecycle/recovery services.
-builder.Services.AddSingleton<IFileSystemDeviceInspector, MacOsFileSystemDeviceInspector>();
 builder.Services.AddSingleton<WorkspaceRecoveryLocationResolver>();
 builder.Services.AddSingleton<IRecoveryStore, FileRecoveryStore>();
 builder.Services.AddSingleton<IMutationReceiptStore, JsonMutationReceiptStore>();
@@ -118,8 +126,10 @@ builder.Services.AddSingleton<IWorkspaceLifecycleService, WorkspaceLifecycleServ
 
 builder.Services.AddSingleton<IAuditWriter, JsonLinesAuditWriter>();
 
+builder.Services.AddSingleton<LocalDeploymentConfigurationStore>();
+builder.Services.AddSingleton<ITunnelClientRunner, TunnelClientRunner>();
+
 builder.Services.AddHostedService<ConfigurationStartupService>();
-builder.Services.AddHostedService<UnixControlSocketServer>();
 
 // Chunk 01 connectivity probes remain available and unchanged.
 builder.Services.AddSingleton<ScratchProbeService>();
@@ -131,7 +141,7 @@ builder.Services
 
 var host = builder.Build();
 
-if (LocalBackupCommand.TryRun(
+if (await LocalCommandRouter.TryRunAsync(
         args,
         host.Services))
 {

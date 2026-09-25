@@ -209,6 +209,24 @@ public sealed class LocalBackupCliIntegrationTests : IDisposable
             await File.ReadAllBytesAsync(
                 filePath));
 
+        var auditPath =
+            Path.Combine(
+                stateRoot,
+                "audit",
+                "operations.jsonl");
+
+        Assert.True(
+            File.Exists(
+                auditPath));
+
+        Assert.Contains(
+            File.ReadAllLines(
+                auditPath),
+            line =>
+                line.Contains(
+                    "\"Operation\":\"backup_restore\"",
+                    StringComparison.Ordinal));
+
         var listAfter =
             await RunHostAsync(
                 configPath,

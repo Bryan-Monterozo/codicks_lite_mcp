@@ -2,11 +2,10 @@
   "SchemaVersion": 1,
   "Agent": {
     "Machine": {
-      "Id": "my-imac",
-      "DisplayName": "My iMac"
+      "Id": "auto",
+      "DisplayName": "auto"
     },
     "ReadOnly": false,
-    "StateDirectory": "~/Library/Application Support/CodicksLiteMcp",
     "Limits": {
       "MaxEditableFileBytes": 1048576,
       "MaxReadResponseBytes": 65536,

@@ -21,7 +21,7 @@ public sealed class AgentOptions
 
     public bool ReadOnly { get; set; }
 
-    public string StateDirectory { get; set; } = "~/Library/Application Support/CodicksLiteMcp";
+    public string StateDirectory { get; set; } = string.Empty;
 
     public AgentLimitsOptions Limits { get; set; } = new();
 
