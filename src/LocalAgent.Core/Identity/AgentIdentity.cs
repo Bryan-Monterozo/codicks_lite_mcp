@@ -12,7 +12,7 @@ public sealed record AgentIdentity(
 {
     public static AgentIdentity Current => new(
         Name: "Codicks Lite MCP",
-        Version: "1.1.1",
+        Version: "1.2.1",
         MachineName: Environment.MachineName,
         OperatingSystem: RuntimeInformation.OSDescription,
         Architecture: RuntimeInformation.OSArchitecture.ToString(),

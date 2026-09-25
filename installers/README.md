@@ -1,67 +1,52 @@
-# Codicks Lite macOS release packaging
+# Codicks Lite 1.2.1 macOS release packaging
 
-Codicks Lite releases are now built directly from the current workspace. The
-installer no longer embeds or reconstructs the C# source tree.
+Codicks Lite releases are built directly from the current workspace. The installer packages compiled/published output and does not embed or reconstruct the C# source tree.
 
 ## Build a release locally
 
 From the repository root:
 
 ```bash
-bash installers/build_codicks-lite_v1_1_1_release_macos --clean
+bash installers/build_codicks-lite_v1_2_1_release_macos --clean
 ```
 
-The default build targets the current Mac architecture and performs:
-
-```text
-dotnet restore
-dotnet build -c Release
-dotnet publish -c Release -r <current mac RID> --self-contained true
-package
-SHA-256
-```
-
-Build both supported macOS packages:
+Compile/package is the default. Add the full regression suite as a release gate with:
 
 ```bash
-bash installers/build_codicks-lite_v1_1_1_release_macos --clean --all
+bash installers/build_codicks-lite_v1_2_1_release_macos --clean --with-tests
 ```
 
-Build a specific architecture:
+Build both supported macOS RIDs:
 
 ```bash
-bash installers/build_codicks-lite_v1_1_1_release_macos --rid osx-arm64
-bash installers/build_codicks-lite_v1_1_1_release_macos --rid osx-x64
+bash installers/build_codicks-lite_v1_2_1_release_macos --clean --all
 ```
 
-Compile/package is the default. To add the full test suite as a release gate:
+Build one RID:
 
 ```bash
-bash installers/build_codicks-lite_v1_1_1_release_macos --with-tests
+bash installers/build_codicks-lite_v1_2_1_release_macos --rid osx-arm64
+bash installers/build_codicks-lite_v1_2_1_release_macos --rid osx-x64
 ```
 
-The current legacy stdio integration tests still include pre-v1.1 assumptions about
-starting writable, so use `--with-tests` after those scenarios are migrated to
-the local OTP/session-control workflow.
+The local builder performs restore/build, optional tests, self-contained publish, packaging, manifest creation, and SHA-256 generation.
 
 ## Output
 
-Packages are written to:
-
 ```text
 installers/dist/
-├── codicks-lite-1.2.0-macos-arm64.tar.gz
-├── codicks-lite-1.2.0-macos-arm64.sha256
-├── codicks-lite-1.2.0-macos-x64.tar.gz
-└── codicks-lite-1.2.0-macos-x64.sha256
+├── codicks-lite-1.2.1-macos-arm64.tar.gz
+├── codicks-lite-1.2.1-macos-arm64.sha256
+├── codicks-lite-1.2.1-macos-x64.tar.gz
+└── codicks-lite-1.2.1-macos-x64.sha256
 ```
 
 Each archive contains:
 
 ```text
-codicks-lite-1.2.0-macos-<arch>/
+codicks-lite-1.2.1-macos-<arch>/
 ├── install
-├── app/                  # compiled self-contained publish output
+├── app/                  # self-contained publish output
 ├── tools/
 │   ├── codicks-lite-control
 │   └── setup_config.sh
@@ -71,31 +56,43 @@ codicks-lite-1.2.0-macos-<arch>/
 └── manifest.txt
 ```
 
-The recipient does not need the Codicks Lite source tree and does not need a .NET
-SDK/runtime because the published app is self-contained.
+The package includes the session, execution, security, review-workflow, review-hardening, and 1.2.1 release-acceptance documentation.
+
+Recipients do not need the repository source tree or a .NET SDK/runtime.
 
 ## Recipient installation
 
 ```bash
-tar -xzf codicks-lite-1.2.0-macos-arm64.tar.gz
-cd codicks-lite-1.2.0-macos-arm64
+tar -xzf codicks-lite-1.2.1-macos-arm64.tar.gz
+cd codicks-lite-1.2.1-macos-arm64
 ./install
 ```
 
-Optionally enter tunnel configuration immediately:
+Optional tunnel configuration:
 
 ```bash
 ./install --configure
 ```
 
-Installed releases remain versioned under:
+## Upgrade behavior
+
+Installed releases live under:
 
 ```text
 ~/Library/Application Support/CodicksLiteMcp/releases/
 ```
 
-`current` selects the active release and `previous` preserves the rollback
-target.
+`current` selects the active release and `previous` preserves the rollback target.
+
+An existing:
+
+```text
+~/Library/Application Support/CodicksLiteMcp/config/agent.json
+```
+
+is preserved. The installer does not automatically grant `update` or `execute`, and it does not automatically enable Host/Sandbox process execution.
+
+Restart `tunnel-client` after installation so the next stdio child uses the new active release.
 
 ## Installed command surface
 
@@ -119,8 +116,29 @@ codicks-lite version
 codicks-lite releases
 codicks-lite rollback
 codicks-lite paths
+codicks-lite host
 ```
 
-The local build script is the release authority. Future Codicks Lite versions should
-update the source normally, then update/copy the release builder for the new
-version instead of embedding the source files into a giant installer script.
+`doctor-local` treats the optional Apple `container` runtime as informational; its absence does not make the base Codicks installation unhealthy.
+
+## Release acceptance
+
+See:
+
+```text
+docs/v1.2.1-release-acceptance.md
+```
+
+After installing, verify:
+
+```bash
+codicks-lite version
+codicks-lite doctor-local
+codicks-lite status
+```
+
+Expected installed version:
+
+```text
+Codicks Lite MCP 1.2.1
+```

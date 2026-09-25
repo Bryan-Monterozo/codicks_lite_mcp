@@ -37,6 +37,188 @@ internal static class ToolResultMapper
             result.Message);
     }
 
+    public static T RequireValue<T>(
+        QueryResult<T> result,
+        IAuditWriter auditWriter,
+        FileReviewAuditContext auditContext)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(auditWriter);
+        ArgumentNullException.ThrowIfNull(auditContext);
+
+        var relativePath =
+            auditContext.RelativePath;
+
+        var baseSha256 =
+            auditContext.BaseSha256;
+
+        var proposedSha256 =
+            auditContext.ProposedSha256;
+
+        var patchSha256 =
+            auditContext.PatchSha256;
+
+        if (result.Value is FileDiffResult diff)
+        {
+            relativePath =
+                diff.RelativePath;
+
+            baseSha256 =
+                diff.BaseSha256;
+
+            proposedSha256 =
+                diff.ProposedSha256;
+        }
+        else if (result.Value is FilePatchPreviewResult preview)
+        {
+            relativePath =
+                preview.RelativePath;
+
+            baseSha256 =
+                preview.BaseSha256;
+
+            proposedSha256 =
+                preview.ProposedSha256;
+
+            patchSha256 =
+                preview.PatchSha256;
+        }
+
+        var errorCode =
+            result.Success
+                ? null
+                : MapQueryError(
+                    result.Error,
+                    result.AccessError);
+
+        WriteFileReviewAudit(
+            auditWriter,
+            auditContext,
+            relativePath,
+            baseSha256,
+            proposedSha256,
+            patchSha256,
+            result.Success,
+            errorCode,
+            backupId: null);
+
+        return RequireValue(result);
+    }
+
+    public static T RequireValue<T>(
+        MutationResult<T> result,
+        IAuditWriter auditWriter,
+        FileReviewAuditContext auditContext)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(auditWriter);
+        ArgumentNullException.ThrowIfNull(auditContext);
+
+        var proposedSha256 =
+            auditContext.ProposedSha256;
+
+        var backupId =
+            auditContext.BackupId;
+
+        if (result.Value is FileMutationReceipt receipt)
+        {
+            proposedSha256 =
+                receipt.Sha256;
+
+            backupId =
+                receipt.BackupId;
+        }
+
+        var errorCode =
+            result.Success
+                ? null
+                : MapMutationError(
+                    result.Error,
+                    result.AccessError);
+
+        WriteFileReviewAudit(
+            auditWriter,
+            auditContext,
+            auditContext.RelativePath,
+            auditContext.BaseSha256,
+            proposedSha256,
+            auditContext.PatchSha256,
+            result.Success,
+            errorCode,
+            backupId);
+
+        return RequireValue(result);
+    }
+
+    public static void RequireReviewAuthorization(
+        SessionAuthorizationResult authorization,
+        IAuditWriter auditWriter,
+        FileReviewAuditContext auditContext)
+    {
+        ArgumentNullException.ThrowIfNull(authorization);
+        ArgumentNullException.ThrowIfNull(auditWriter);
+        ArgumentNullException.ThrowIfNull(auditContext);
+
+        if (authorization.Allowed)
+        {
+            return;
+        }
+
+        var errorCode =
+            string.IsNullOrWhiteSpace(
+                authorization.ErrorCode)
+                ? "ACCESS_DENIED"
+                : authorization.ErrorCode;
+
+        var message =
+            string.IsNullOrWhiteSpace(
+                authorization.Message)
+                ? "Session authorization denied."
+                : authorization.Message;
+
+        WriteFileReviewAudit(
+            auditWriter,
+            auditContext,
+            auditContext.RelativePath,
+            auditContext.BaseSha256,
+            auditContext.ProposedSha256,
+            auditContext.PatchSha256,
+            success: false,
+            errorCode,
+            auditContext.BackupId);
+
+        throw CreateException(
+            errorCode,
+            message);
+    }
+
+    private static void WriteFileReviewAudit(
+        IAuditWriter auditWriter,
+        FileReviewAuditContext auditContext,
+        string? relativePath,
+        string? baseSha256,
+        string? proposedSha256,
+        string? patchSha256,
+        bool success,
+        string? errorCode,
+        string? backupId)
+    {
+        _ = auditWriter.TryWrite(
+            new FileReviewAuditRecord(
+                DateTimeOffset.UtcNow,
+                auditContext.Operation,
+                auditContext.WorkspaceId,
+                relativePath,
+                baseSha256,
+                proposedSha256,
+                patchSha256,
+                auditContext.Preview,
+                success,
+                errorCode,
+                backupId));
+    }
 
     public static T RequireValue<T>(
         MutationResult<T> result,
@@ -188,6 +370,17 @@ internal static class ToolResultMapper
         };
     }
 }
+
+internal sealed record FileReviewAuditContext(
+    string Operation,
+    string? WorkspaceId,
+    string? RelativePath,
+    string? BaseSha256,
+    string? ProposedSha256,
+    string? PatchSha256,
+    bool Preview,
+    string? BackupId);
+
 internal sealed record MutationAuditContext(
     string Operation,
     string? WorkspaceId,

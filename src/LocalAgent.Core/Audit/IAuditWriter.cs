@@ -31,9 +31,24 @@ public sealed record ProcessExecutionAuditRecord(
     bool Success,
     string? ErrorCode);
 
+public sealed record FileReviewAuditRecord(
+    DateTimeOffset TimestampUtc,
+    string Operation,
+    string? WorkspaceId,
+    string? RelativePath,
+    string? BaseSha256,
+    string? ProposedSha256,
+    string? PatchSha256,
+    bool Preview,
+    bool Success,
+    string? ErrorCode,
+    string? BackupId);
+
 public interface IAuditWriter
 {
     bool TryWrite(OperationAuditRecord record);
 
     bool TryWrite(ProcessExecutionAuditRecord record);
+
+    bool TryWrite(FileReviewAuditRecord record);
 }

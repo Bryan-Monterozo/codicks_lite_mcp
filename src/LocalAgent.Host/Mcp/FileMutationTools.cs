@@ -154,7 +154,26 @@ public static class FileMutationTools
     {
         ArgumentNullException.ThrowIfNull(applyService);
         ArgumentNullException.ThrowIfNull(auditWriter);
-        SessionAuthorization.RequireMutation(sessionGuard);
+        ArgumentNullException.ThrowIfNull(sessionGuard);
+
+        var auditContext =
+            new FileReviewAuditContext(
+                "file_patch_apply",
+                workspaceId,
+                relativePath,
+                FileReviewAuditMetadata.NormalizeSha256(
+                    expectedHash),
+                ProposedSha256: null,
+                PatchSha256:
+                    FileReviewAuditMetadata.ComputeUtf8Sha256(
+                        patch),
+                Preview: false,
+                BackupId: null);
+
+        ToolResultMapper.RequireReviewAuthorization(
+            sessionGuard.AuthorizeMutation(),
+            auditWriter,
+            auditContext);
 
         var result = applyService.Apply(
             workspaceId,
@@ -167,14 +186,7 @@ public static class FileMutationTools
             ToolResultMapper.RequireValue(
                 result,
                 auditWriter,
-                new MutationAuditContext(
-                    "file_patch_apply",
-                    workspaceId,
-                    relativePath,
-                    relativePath,
-                    null,
-                    null,
-                    false));
+                auditContext);
 
         return new FilePatchApplyResult(
             receipt.RelativePath,

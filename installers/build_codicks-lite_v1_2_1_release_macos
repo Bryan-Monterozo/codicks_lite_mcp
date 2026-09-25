@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CODICKS_LITE_VERSION="1.2.0"
+CODICKS_LITE_VERSION="1.2.1"
 CONFIGURATION="Release"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,10 +21,10 @@ fail() { printf '\nERROR: %s\n' "$1" >&2; exit 1; }
 
 usage() {
   cat <<'EOF'
-Build Codicks Lite MCP 1.2.0 distributable macOS release packages locally.
+Build Codicks Lite MCP 1.2.1 distributable macOS release packages locally.
 
 Usage:
-  ./installers/build_codicks-lite_v1_2_0_release_macos [options]
+  ./installers/build_codicks-lite_v1_2_1_release_macos [options]
 
 Options:
   --all                 Build both osx-arm64 and osx-x64 packages.
@@ -38,8 +38,8 @@ Default:
   Builds a self-contained package for the current Mac architecture.
 
 Output:
-  installers/dist/codicks-lite-1.2.0-macos-arm64.tar.gz
-  installers/dist/codicks-lite-1.2.0-macos-arm64.sha256
+  installers/dist/codicks-lite-1.2.1-macos-arm64.tar.gz
+  installers/dist/codicks-lite-1.2.1-macos-arm64.sha256
 
 or the x64 equivalent.
 
@@ -96,7 +96,7 @@ ensure_prerequisites() {
 
   [[ -f "$SOLUTION" ]] || fail "Missing solution: $SOLUTION"
   [[ -f "$HOST_PROJECT" ]] || fail "Missing host project: $HOST_PROJECT"
-  [[ -f "$SCRIPT_DIR/codicks-lite_v1_2_0_setup_macos" ]] || fail "Missing package installer template."
+  [[ -f "$SCRIPT_DIR/codicks-lite_v1_2_1_setup_macos" ]] || fail "Missing package installer template."
 
   local sdk
   sdk="$(dotnet --version)"
@@ -172,7 +172,7 @@ build_package() {
   printf '%s\n' "$CODICKS_LITE_VERSION" > "$publish_dir/codicks-lite-version.txt"
   printf '%s\n' "$rid" > "$publish_dir/codicks-lite-runtime-id.txt"
 
-  cp "$SCRIPT_DIR/codicks-lite_v1_2_0_setup_macos" "$package_root/install"
+  cp "$SCRIPT_DIR/codicks-lite_v1_2_1_setup_macos" "$package_root/install"
   cp "$ROOT_DIR/scripts/codicks-lite-control" "$package_root/tools/codicks-lite-control"
   cp "$ROOT_DIR/setup_config.sh" "$package_root/tools/setup_config.sh"
   cp "$ROOT_DIR/src/LocalAgent.Host/appsettings.json" "$package_root/config/agent.default.json"
@@ -180,6 +180,14 @@ build_package() {
   cp "$ROOT_DIR/docs/v1.1-session-security.md" "$package_root/docs/v1.1-session-security.md"
   cp "$ROOT_DIR/docs/local-command-execution-acceptance.md" "$package_root/docs/local-command-execution-acceptance.md"
   cp "$ROOT_DIR/docs/local-command-execution-sandbox.md" "$package_root/docs/local-command-execution-sandbox.md"
+  cp "$ROOT_DIR/docs/security-model.md" "$package_root/docs/security-model.md"
+  cp "$ROOT_DIR/docs/connection-profile.md" "$package_root/docs/connection-profile.md"
+  cp "$ROOT_DIR/docs/v1.2-file-diff.md" "$package_root/docs/v1.2-file-diff.md"
+  cp "$ROOT_DIR/docs/v1.2-file-patch-preview.md" "$package_root/docs/v1.2-file-patch-preview.md"
+  cp "$ROOT_DIR/docs/v1.2-file-patch-apply.md" "$package_root/docs/v1.2-file-patch-apply.md"
+  cp "$ROOT_DIR/docs/v1.2-review-workflow.md" "$package_root/docs/v1.2-review-workflow.md"
+  cp "$ROOT_DIR/docs/v1.2-review-hardening.md" "$package_root/docs/v1.2-review-hardening.md"
+  cp "$ROOT_DIR/docs/v1.2.1-release-acceptance.md" "$package_root/docs/v1.2.1-release-acceptance.md"
 
   chmod 755     "$package_root/install"     "$package_root/tools/codicks-lite-control"     "$package_root/tools/setup_config.sh"
 

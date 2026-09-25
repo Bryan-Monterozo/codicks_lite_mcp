@@ -106,7 +106,10 @@ public sealed class Chunk09McpHardeningIntegrationTests : IDisposable
             "file_update",
             "file_move",
             "file_delete",
-            "file_restore"
+            "file_restore",
+            "file_diff",
+            "file_patch_preview",
+            "file_patch_apply"
         };
 
         foreach (var expectedTool in expectedTools)

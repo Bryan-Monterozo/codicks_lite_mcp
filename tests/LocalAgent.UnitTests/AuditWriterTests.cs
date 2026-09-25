@@ -166,6 +166,94 @@ public sealed class AuditWriterTests : IDisposable
                 out _));
     }
 
+    [Fact]
+    public void TryWrite_FileReview_WritesMetadataOnly()
+    {
+        Directory.CreateDirectory(_root);
+
+        var configuration = new AgentConfiguration
+        {
+            Agent =
+            {
+                StateDirectory = _root
+            }
+        };
+
+        var writer = new JsonLinesAuditWriter(
+            configuration,
+            new UserPathResolver());
+
+        var record = new FileReviewAuditRecord(
+            TimestampUtc: DateTimeOffset.UtcNow,
+            Operation: "file_patch_preview",
+            WorkspaceId: "test",
+            RelativePath: "src/example.txt",
+            BaseSha256: new string('A', 64),
+            ProposedSha256: new string('B', 64),
+            PatchSha256: new string('C', 64),
+            Preview: true,
+            Success: false,
+            ErrorCode: "PATCH_CONFLICT",
+            BackupId: null);
+
+        Assert.True(
+            writer.TryWrite(record));
+
+        var auditPath = Path.Combine(
+            _root,
+            "audit",
+            "operations.jsonl");
+
+        var line = Assert.Single(
+            File.ReadAllLines(
+                auditPath));
+
+        using var json =
+            JsonDocument.Parse(line);
+
+        Assert.Equal(
+            "file_patch_preview",
+            json.RootElement
+                .GetProperty("Operation")
+                .GetString());
+
+        Assert.Equal(
+            "PATCH_CONFLICT",
+            json.RootElement
+                .GetProperty("ErrorCode")
+                .GetString());
+
+        Assert.True(
+            json.RootElement
+                .GetProperty("Preview")
+                .GetBoolean());
+
+        Assert.False(
+            json.RootElement.TryGetProperty(
+                "Content",
+                out _));
+
+        Assert.False(
+            json.RootElement.TryGetProperty(
+                "Patch",
+                out _));
+
+        Assert.False(
+            json.RootElement.TryGetProperty(
+                "ReviewToken",
+                out _));
+
+        Assert.False(
+            json.RootElement.TryGetProperty(
+                "UnifiedDiff",
+                out _));
+
+        Assert.False(
+            json.RootElement.TryGetProperty(
+                "Hunks",
+                out _));
+    }
+
     public void Dispose()
     {
         try

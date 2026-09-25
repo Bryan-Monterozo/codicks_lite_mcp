@@ -27,6 +27,12 @@ public sealed class JsonLinesAuditWriter(
         return TryWriteCore(record);
     }
 
+    public bool TryWrite(FileReviewAuditRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return TryWriteCore(record);
+    }
+
     private bool TryWriteCore<T>(T record)
         where T : class
     {

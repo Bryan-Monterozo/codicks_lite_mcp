@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using LocalAgent.Core.Audit;
 using LocalAgent.Core.Files;
 using LocalAgent.Core.Security;
 using ModelContextProtocol.Server;
@@ -96,6 +97,7 @@ public static class FileQueryTools
     [Description("Compares an approved workspace text file with proposed complete replacement content without modifying the file. Returns a bounded unified diff, structured hunks, and base/proposed SHA-256 values.")]
     public static FileDiffResult FileDiff(
         IWorkspaceDiffService diffService,
+        IAuditWriter auditWriter,
         ISessionGuard sessionGuard,
         [Description("Configured workspace id.")] string workspaceId,
         [Description("Workspace-relative regular text file path.")] string relativePath,
@@ -103,14 +105,34 @@ public static class FileQueryTools
         [Description("Optional SHA-256 from a prior read. If supplied and stale, the preview fails with CONFLICT.")] string? expectedHash = null)
     {
         ArgumentNullException.ThrowIfNull(diffService);
-        SessionAuthorization.RequireRead(sessionGuard);
+        ArgumentNullException.ThrowIfNull(auditWriter);
+        ArgumentNullException.ThrowIfNull(sessionGuard);
+
+        var auditContext =
+            new FileReviewAuditContext(
+                "file_diff",
+                workspaceId,
+                relativePath,
+                FileReviewAuditMetadata.NormalizeSha256(
+                    expectedHash),
+                ProposedSha256: null,
+                PatchSha256: null,
+                Preview: true,
+                BackupId: null);
+
+        ToolResultMapper.RequireReviewAuthorization(
+            sessionGuard.AuthorizeRead(),
+            auditWriter,
+            auditContext);
 
         return ToolResultMapper.RequireValue(
             diffService.DiffText(
                 workspaceId,
                 relativePath,
                 content,
-                expectedHash));
+                expectedHash),
+            auditWriter,
+            auditContext);
     }
 
     [McpServerTool(
@@ -124,6 +146,7 @@ public static class FileQueryTools
     [Description("Validates and applies one strict unified-diff patch entirely in memory against an approved workspace text file, then returns the canonical review diff without modifying the file.")]
     public static FilePatchPreviewResult FilePatchPreview(
         IWorkspacePatchPreviewService previewService,
+        IAuditWriter auditWriter,
         ISessionGuard sessionGuard,
         [Description("Configured workspace id.")] string workspaceId,
         [Description("Workspace-relative regular text file path. Patch headers must target this exact file.")] string relativePath,
@@ -131,14 +154,36 @@ public static class FileQueryTools
         [Description("Required SHA-256 of the current file bytes from a prior file_read/file_diff result.")] string expectedHash)
     {
         ArgumentNullException.ThrowIfNull(previewService);
-        SessionAuthorization.RequireRead(sessionGuard);
+        ArgumentNullException.ThrowIfNull(auditWriter);
+        ArgumentNullException.ThrowIfNull(sessionGuard);
+
+        var auditContext =
+            new FileReviewAuditContext(
+                "file_patch_preview",
+                workspaceId,
+                relativePath,
+                FileReviewAuditMetadata.NormalizeSha256(
+                    expectedHash),
+                ProposedSha256: null,
+                PatchSha256:
+                    FileReviewAuditMetadata.ComputeUtf8Sha256(
+                        patch),
+                Preview: true,
+                BackupId: null);
+
+        ToolResultMapper.RequireReviewAuthorization(
+            sessionGuard.AuthorizeRead(),
+            auditWriter,
+            auditContext);
 
         return ToolResultMapper.RequireValue(
             previewService.Preview(
                 workspaceId,
                 relativePath,
                 patch,
-                expectedHash));
+                expectedHash),
+            auditWriter,
+            auditContext);
     }
 
     [McpServerTool(
