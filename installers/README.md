@@ -1,4 +1,4 @@
-# Codicks Lite 1.2.1 macOS release packaging
+# Codicks Lite 1.2.2 macOS release packaging
 
 Codicks Lite releases are built directly from the current workspace. The installer packages compiled/published output and does not embed or reconstruct the C# source tree.
 
@@ -7,26 +7,26 @@ Codicks Lite releases are built directly from the current workspace. The install
 From the repository root:
 
 ```bash
-bash installers/build_codicks-lite_v1_2_1_release_macos --clean
+bash installers/build_codicks-lite_v1_2_2_release_macos --clean
 ```
 
-Compile/package is the default. Add the full regression suite as a release gate with:
+Add the full regression suite as a release gate:
 
 ```bash
-bash installers/build_codicks-lite_v1_2_1_release_macos --clean --with-tests
+bash installers/build_codicks-lite_v1_2_2_release_macos --clean --with-tests
 ```
 
 Build both supported macOS RIDs:
 
 ```bash
-bash installers/build_codicks-lite_v1_2_1_release_macos --clean --all
+bash installers/build_codicks-lite_v1_2_2_release_macos --clean --all
 ```
 
 Build one RID:
 
 ```bash
-bash installers/build_codicks-lite_v1_2_1_release_macos --rid osx-arm64
-bash installers/build_codicks-lite_v1_2_1_release_macos --rid osx-x64
+bash installers/build_codicks-lite_v1_2_2_release_macos --rid osx-arm64
+bash installers/build_codicks-lite_v1_2_2_release_macos --rid osx-x64
 ```
 
 The local builder performs restore/build, optional tests, self-contained publish, packaging, manifest creation, and SHA-256 generation.
@@ -35,16 +35,16 @@ The local builder performs restore/build, optional tests, self-contained publish
 
 ```text
 installers/dist/
-├── codicks-lite-1.2.1-macos-arm64.tar.gz
-├── codicks-lite-1.2.1-macos-arm64.sha256
-├── codicks-lite-1.2.1-macos-x64.tar.gz
-└── codicks-lite-1.2.1-macos-x64.sha256
+├── codicks-lite-1.2.2-macos-arm64.tar.gz
+├── codicks-lite-1.2.2-macos-arm64.sha256
+├── codicks-lite-1.2.2-macos-x64.tar.gz
+└── codicks-lite-1.2.2-macos-x64.sha256
 ```
 
 Each archive contains:
 
 ```text
-codicks-lite-1.2.1-macos-<arch>/
+codicks-lite-1.2.2-macos-<arch>/
 ├── install
 ├── app/                  # self-contained publish output
 ├── tools/
@@ -56,15 +56,15 @@ codicks-lite-1.2.1-macos-<arch>/
 └── manifest.txt
 ```
 
-The package includes the session, execution, security, review-workflow, review-hardening, and 1.2.1 release-acceptance documentation.
+The package includes session, execution, security, review, hardening, transfer-optimization, backup-restore, and release-acceptance documentation.
 
 Recipients do not need the repository source tree or a .NET SDK/runtime.
 
 ## Recipient installation
 
 ```bash
-tar -xzf codicks-lite-1.2.1-macos-arm64.tar.gz
-cd codicks-lite-1.2.1-macos-arm64
+tar -xzf codicks-lite-1.2.2-macos-arm64.tar.gz
+cd codicks-lite-1.2.2-macos-arm64
 ./install
 ```
 
@@ -112,6 +112,10 @@ codicks-lite lock
 codicks-lite read --otp <OTP> --for <minutes>
 codicks-lite full --otp <OTP> --for <minutes>
 
+codicks-lite backup-list
+codicks-lite backup-show <backupId>
+codicks-lite backup-restore <backupId> [--yes]
+
 codicks-lite version
 codicks-lite releases
 codicks-lite rollback
@@ -119,14 +123,19 @@ codicks-lite paths
 codicks-lite host
 ```
 
-`doctor-local` treats the optional Apple `container` runtime as informational; its absence does not make the base Codicks installation unhealthy.
+The backup commands are owner-local commands. They are not MCP tools.
+
+`backup-restore` verifies the selected backup, revalidates current workspace `Update` permission, shows current/backup hashes, creates a fresh safety backup of the version being replaced, and then restores exact bytes atomically.
+
+`doctor-local` treats the optional Apple `container` runtime as informational; its absence does not make the base installation unhealthy.
 
 ## Release acceptance
 
 See:
 
 ```text
-docs/v1.2.1-release-acceptance.md
+docs/v1.2.2-release-acceptance.md
+docs/v1.2.2-transfer-and-backup.md
 ```
 
 After installing, verify:
@@ -140,5 +149,5 @@ codicks-lite status
 Expected installed version:
 
 ```text
-Codicks Lite MCP 1.2.1
+Codicks Lite MCP 1.2.2
 ```

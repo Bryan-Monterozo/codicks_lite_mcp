@@ -60,6 +60,12 @@ public static class FileReviewSummaryFormatter
                 ? "yes"
                 : "no");
 
+        builder.Append("Diff included: ");
+        builder.AppendLine(
+            result.DiffIncluded
+                ? "yes"
+                : "no");
+
         if (result.ReviewExpiresAtUtc is not null)
         {
             builder.Append("Review token expires: ");

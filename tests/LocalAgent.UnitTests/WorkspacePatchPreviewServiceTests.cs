@@ -77,7 +77,8 @@ public sealed class WorkspacePatchPreviewServiceTests : IDisposable
                     "-two",
                     "+changed",
                     " three"),
-                hash);
+                hash,
+                includeDiff: true);
 
         Assert.True(
             result.Success,
@@ -124,6 +125,54 @@ public sealed class WorkspacePatchPreviewServiceTests : IDisposable
                 Path.Combine(
                     _stateRoot,
                     "recovery")));
+    }
+
+    [Fact]
+    public void Preview_DefaultBindingOnly_OmitsDiffButIssuesToken()
+    {
+        var path = Path.Combine(
+            _workspaceRoot,
+            "compact.txt");
+
+        File.WriteAllText(
+            path,
+            "one\ntwo",
+            new UTF8Encoding(false));
+
+        var result =
+            CreateService().Preview(
+                "test",
+                "compact.txt",
+                Patch(
+                    "--- a/compact.txt",
+                    "+++ b/compact.txt",
+                    "@@ -2,1 +2,1 @@",
+                    "-two",
+                    "+changed"),
+                HashFile(path));
+
+        Assert.True(
+            result.Success,
+            result.Message);
+
+        Assert.NotNull(
+            result.Value);
+
+        Assert.True(
+            result.Value.CanApply);
+
+        Assert.False(
+            result.Value.DiffIncluded);
+
+        Assert.Empty(
+            result.Value.UnifiedDiff);
+
+        Assert.Empty(
+            result.Value.Hunks);
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                result.Value.ReviewToken));
     }
 
     [Fact]

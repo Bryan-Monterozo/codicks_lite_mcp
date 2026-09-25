@@ -313,6 +313,82 @@ public sealed class FilePatchPreviewMcpIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task FilePatchPreview_DefaultResponse_OmitsDiffAndHunks()
+    {
+        var fixture =
+            await CreateHostFixtureAsync(
+                "compact");
+
+        await using var client =
+            await McpClient.CreateAsync(
+                fixture.Transport);
+
+        await fixture.SessionUnlocker.UnlockFullAsync(
+            fixture.StateRoot);
+
+        var patch =
+            Patch(
+                "--- a/sample.txt",
+                "+++ b/sample.txt",
+                "@@ -2,1 +2,1 @@",
+                "-two",
+                "+compact");
+
+        var result =
+            await client.CallToolAsync(
+                "file_patch_preview",
+                new Dictionary<string, object?>
+                {
+                    ["workspaceId"] =
+                        "patch",
+                    ["relativePath"] =
+                        "sample.txt",
+                    ["patch"] =
+                        patch,
+                    ["expectedHash"] =
+                        fixture.SampleHash
+                },
+                cancellationToken:
+                    CancellationToken.None);
+
+        AssertToolSuccess(
+            result,
+            "compact file_patch_preview");
+
+        var content =
+            result.StructuredContent!.Value;
+
+        Assert.True(
+            GetRequiredBoolean(
+                content,
+                "canApply"));
+
+        Assert.False(
+            GetRequiredBoolean(
+                content,
+                "diffIncluded"));
+
+        Assert.Equal(
+            string.Empty,
+            GetRequiredString(
+                content,
+                "unifiedDiff"));
+
+        Assert.Equal(
+            0,
+            GetRequiredProperty(
+                content,
+                "hunks")
+                .GetArrayLength());
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                GetRequiredString(
+                    content,
+                    "reviewToken")));
+    }
+
+    [Fact]
     public async Task FilePatchPreview_LockedSession_IsRejected()
     {
         var fixture =
@@ -508,7 +584,9 @@ public sealed class FilePatchPreviewMcpIntegrationTests : IDisposable
                 ["patch"] =
                     patch,
                 ["expectedHash"] =
-                    expectedHash
+                    expectedHash,
+                ["includeDiff"] =
+                    true
             },
             cancellationToken:
                 CancellationToken.None);

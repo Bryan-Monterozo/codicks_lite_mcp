@@ -98,7 +98,7 @@ public static class FileMutationTools
         Destructive = true,
         Idempotent = true,
         OpenWorld = false)]
-    [Description("Replaces the complete contents of an approved text file using the SHA-256 from a prior file_read. Stale hashes return CONFLICT. A recovery backup is written before replacement. Set dryRun=true to validate without writing.")]
+    [Description("Backward-compatible complete-content replacement path. For localized edits, prefer file_patch_preview plus token-only file_patch_apply to avoid resending the full file. Uses the SHA-256 from a prior file_read, creates a recovery backup, and rejects stale hashes with CONFLICT.")]
     public static FileMutationReceipt FileUpdate(
         IWorkspaceMutationService mutationService,
         IAuditWriter auditWriter,
@@ -141,16 +141,16 @@ public static class FileMutationTools
         Destructive = true,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Applies the exact unified patch previously reviewed by file_patch_preview. Requires mutation authorization, workspace Update permission, the reviewed base SHA-256, and the short-lived one-time review token. Uses the same backup and atomic replacement path as file_update.")]
+    [Description("Applies the exact patch retained by file_patch_preview using its short-lived one-time review token. New clients may omit patch; the optional patch field remains accepted for v1.2.1 compatibility. Requires mutation authorization and workspace Update permission.")]
     public static FilePatchApplyResult FilePatchApply(
         IWorkspacePatchApplyService applyService,
         IAuditWriter auditWriter,
         ISessionGuard sessionGuard,
         [Description("Configured workspace id used during preview.")] string workspaceId,
         [Description("Workspace-relative file path used during preview.")] string relativePath,
-        [Description("Exact unified patch text that was previewed.")] string patch,
         [Description("Reviewed base SHA-256 used during preview.")] string expectedHash,
-        [Description("Short-lived review token returned by file_patch_preview.")] string reviewToken)
+        [Description("Short-lived review token returned by file_patch_preview.")] string reviewToken,
+        [Description("Optional exact patch text for v1.2.1 compatibility. New clients should omit this and let Codicks use the memory-only patch bound to reviewToken.")] string? patch = null)
     {
         ArgumentNullException.ThrowIfNull(applyService);
         ArgumentNullException.ThrowIfNull(auditWriter);

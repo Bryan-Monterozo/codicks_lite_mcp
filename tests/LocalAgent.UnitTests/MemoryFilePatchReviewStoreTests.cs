@@ -27,7 +27,7 @@ public sealed class MemoryFilePatchReviewStoreTests
             CreateBinding("one");
 
         var receipt =
-            store.Issue(binding);
+            store.Issue(binding, "patch-one");
 
         Assert.Equal(
             43,
@@ -36,6 +36,10 @@ public sealed class MemoryFilePatchReviewStoreTests
         Assert.Equal(
             binding,
             receipt.Binding);
+
+        Assert.Equal(
+            "patch-one",
+            receipt.Patch);
 
         Assert.Equal(
             clock.GetUtcNow().AddMinutes(10),
@@ -78,7 +82,8 @@ public sealed class MemoryFilePatchReviewStoreTests
 
         var expired =
             store.Issue(
-                CreateBinding("expired"));
+                CreateBinding("expired"),
+                "patch-expired");
 
         clock.Advance(
             TimeSpan.FromMinutes(11));
@@ -89,7 +94,8 @@ public sealed class MemoryFilePatchReviewStoreTests
 
         var current =
             store.Issue(
-                CreateBinding("current"));
+                CreateBinding("current"),
+                "patch-current");
 
         Assert.True(
             store.TryConsume(
@@ -112,7 +118,8 @@ public sealed class MemoryFilePatchReviewStoreTests
 
         var token =
             first.Issue(
-                CreateBinding("restart"))
+                CreateBinding("restart"),
+                "patch-restart")
                 .Token;
 
         var restarted =
@@ -144,7 +151,8 @@ public sealed class MemoryFilePatchReviewStoreTests
             var receipt =
                 store.Issue(
                     CreateBinding(
-                        index.ToString()));
+                        index.ToString()),
+                    $"patch-{index}");
 
             firstToken ??=
                 receipt.Token;

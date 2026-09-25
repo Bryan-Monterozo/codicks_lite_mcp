@@ -83,7 +83,7 @@ public sealed class FilePatchApplyMcpIntegrationTests : IDisposable
                 client,
                 "patch",
                 "sample.txt",
-                patch,
+                patch: null,
                 fixture.SampleHash,
                 reviewToken);
 
@@ -156,7 +156,7 @@ public sealed class FilePatchApplyMcpIntegrationTests : IDisposable
                 client,
                 "patch",
                 "sample.txt",
-                patch,
+                patch: null,
                 fixture.SampleHash,
                 reviewToken);
 
@@ -607,26 +607,35 @@ public sealed class FilePatchApplyMcpIntegrationTests : IDisposable
         McpClient client,
         string workspaceId,
         string relativePath,
-        string patch,
+        string? patch,
         string expectedHash,
-        string reviewToken) =>
-        client.CallToolAsync(
-            "file_patch_apply",
+        string reviewToken)
+    {
+        var arguments =
             new Dictionary<string, object?>
             {
                 ["workspaceId"] =
                     workspaceId,
                 ["relativePath"] =
                     relativePath,
-                ["patch"] =
-                    patch,
                 ["expectedHash"] =
                     expectedHash,
                 ["reviewToken"] =
                     reviewToken
-            },
+            };
+
+        if (patch is not null)
+        {
+            arguments["patch"] =
+                patch;
+        }
+
+        return client.CallToolAsync(
+            "file_patch_apply",
+            arguments,
             cancellationToken:
                 CancellationToken.None);
+    }
 
     private static void AssertToolSuccess(
         CallToolResult result,

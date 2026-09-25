@@ -6,13 +6,13 @@ using Xunit;
 
 namespace LocalAgent.IntegrationTests;
 
-public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
+public sealed class V122ReleaseAcceptanceIntegrationTests : IDisposable
 {
     private readonly string _root =
-        TestSessionUnlocker.CreateShortRoot("r121");
+        TestSessionUnlocker.CreateShortRoot("r122");
 
     [Fact]
-    public async Task V121_BackwardCompatibleAndReviewedWorkflow_CompletesThroughStdio()
+    public async Task V122_BackwardCompatibleAndReviewedWorkflow_CompletesThroughStdio()
     {
         var workspaceRoot =
             Path.Combine(
@@ -52,9 +52,9 @@ public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
                     Machine = new
                     {
                         Id =
-                            "v121-release-acceptance",
+                            "v122-release-acceptance",
                         DisplayName =
-                            "V121 Release Acceptance"
+                            "V122 Release Acceptance"
                     },
                     ReadOnly = false,
                     StateDirectory =
@@ -96,7 +96,7 @@ public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
                 new StdioClientTransportOptions
                 {
                     Name =
-                        "codicks-v121-release-acceptance",
+                        "codicks-v122-release-acceptance",
                     Command = "dotnet",
                     Arguments =
                     [
@@ -130,7 +130,7 @@ public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
             $"server_info failed: {GetResultText(serverInfo)}");
 
         Assert.Contains(
-            "1.2.1",
+            "1.2.2",
             GetResultText(serverInfo),
             StringComparison.Ordinal);
 
@@ -163,6 +163,21 @@ public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
                 tool =>
                     tool.Name == toolName);
         }
+
+        Assert.DoesNotContain(
+            tools,
+            tool =>
+                tool.Name.Contains(
+                    "backup",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.DoesNotContain(
+            tools,
+            tool =>
+                string.Equals(
+                    tool.Name,
+                    "shell_exec",
+                    StringComparison.Ordinal));
 
         var create =
             await client.CallToolAsync(
@@ -287,6 +302,24 @@ public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
                 preview.StructuredContent!.Value,
                 "canApply"));
 
+        Assert.False(
+            GetRequiredBoolean(
+                preview.StructuredContent.Value,
+                "diffIncluded"));
+
+        Assert.Equal(
+            string.Empty,
+            GetRequiredStringAllowEmpty(
+                preview.StructuredContent.Value,
+                "unifiedDiff"));
+
+        Assert.Equal(
+            0,
+            GetRequiredProperty(
+                preview.StructuredContent.Value,
+                "hunks")
+                .GetArrayLength());
+
         var reviewToken =
             GetRequiredString(
                 preview.StructuredContent.Value,
@@ -306,8 +339,6 @@ public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
                         "release",
                     ["relativePath"] =
                         "sample.txt",
-                    ["patch"] =
-                        patch,
                     ["expectedHash"] =
                         updatedHash,
                     ["reviewToken"] =
@@ -434,6 +465,23 @@ public sealed class V121ReleaseAcceptanceIntegrationTests : IDisposable
                 value));
 
         return value!;
+    }
+
+    private static string GetRequiredStringAllowEmpty(
+        JsonElement content,
+        string propertyName)
+    {
+        var property =
+            GetRequiredProperty(
+                content,
+                propertyName);
+
+        var value =
+            property.GetString();
+
+        Assert.NotNull(value);
+
+        return value;
     }
 
     private static bool GetRequiredBoolean(

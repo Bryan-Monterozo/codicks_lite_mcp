@@ -32,10 +32,10 @@ dotnet build Codicks.Lite.Mcp.slnx -c Release
 dotnet test Codicks.Lite.Mcp.slnx -c Release
 ```
 
-Build the **1.2.1** self-contained package for the current Mac architecture:
+Build the **1.2.2** self-contained package for the current Mac architecture:
 
 ```bash
-bash installers/build_codicks-lite_v1_2_1_release_macos --clean --with-tests
+bash installers/build_codicks-lite_v1_2_2_release_macos --clean --with-tests
 ```
 
 The installer build is intentionally performed locally from the current workspace. See [release packaging and installation](installers/README.md).
@@ -87,13 +87,13 @@ There is no permanent-delete MCP tool and no raw `shell_exec` / implicit `bash -
 
 ## Review workflow
 
-The v1.2.1 reviewed-change workflow is:
+The v1.2.2 reviewed-change workflow is:
 
 1. `file_read`
-2. `file_diff` or `file_patch_preview`
-3. inspect the canonical review
-4. obtain approval when appropriate
-5. `file_patch_apply`
+2. send the patch once with `file_patch_preview`
+3. by default receive only hashes/counts/token (`includeDiff=false`)
+4. when the user wants the diff, request `includeDiff=true`
+5. apply with `file_patch_apply` using the review token; new clients omit the patch field
 6. report the new SHA-256 and backup id
 
 See:
@@ -103,6 +103,7 @@ See:
 - [patch apply contract](docs/v1.2-file-patch-apply.md)
 - [review workflow](docs/v1.2-review-workflow.md)
 - [review hardening](docs/v1.2-review-hardening.md)
+- [1.2.2 transfer + local backup behavior](docs/v1.2.2-transfer-and-backup.md)
 
 ## Installed commands
 
@@ -116,6 +117,9 @@ codicks-lite lock
 codicks-lite read --otp <OTP> --for <minutes>
 codicks-lite full --otp <OTP> --for <minutes>
 codicks-lite version
+codicks-lite backup-list
+codicks-lite backup-show <backupId>
+codicks-lite backup-restore <backupId>
 codicks-lite releases
 codicks-lite rollback
 ```
@@ -132,11 +136,21 @@ codicks-lite rollback
 
 ## Release history
 
+- **v1.2.2 — 2026-09-25:** transfer-efficient patch binding and local update-backup restore
 - **v1.2.1 — 2026-09-25:** reviewed file changes and release hardening
 - **v1.2.0 — 2026-09-24:** controlled `process_exec` and optional experimental Apple-container Sandbox execution
 - **v1.1.1 — 2026-09-24:** local release builder/installer and bug fixes
 - **v1.1.0 — 2026-09-24:** local OTP session locking/security controls
 - **v1.0.0 — 2026-09-23:** initial release
+
+### v1.2.2
+
+- `file_patch_preview` defaults to compact binding-only responses; use `includeDiff=true` for full diff/hunks
+- reviewed patch text is retained memory-only under the short-lived review token
+- new clients apply with token + base hash without resending the patch
+- v1.2.1 clients may still send the optional patch field
+- added local-only `codicks-lite backup-list`, `backup-show`, and `backup-restore`
+- backup restore verifies hashes/permissions, creates a safety backup of the current version, and restores exact bytes atomically
 
 ### v1.2.1
 

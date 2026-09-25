@@ -24,7 +24,8 @@ public sealed class WorkspacePatchPreviewService(
         string workspaceId,
         string relativePath,
         string patch,
-        string expectedHash)
+        string expectedHash,
+        bool includeDiff = false)
     {
         if (patch is null)
         {
@@ -232,7 +233,8 @@ public sealed class WorkspacePatchPreviewService(
                         currentHash,
                         proposedHash,
                         application.PatchSha256,
-                        reviewHash));
+                        reviewHash),
+                    patch);
         }
 
         var reviewResult =
@@ -244,12 +246,17 @@ public sealed class WorkspacePatchPreviewService(
                 canApply,
                 diff.Additions,
                 diff.Deletions,
-                diff.UnifiedDiff,
-                diff.Hunks,
+                includeDiff
+                    ? diff.UnifiedDiff
+                    : string.Empty,
+                includeDiff
+                    ? diff.Hunks
+                    : Array.Empty<FileDiffHunk>(),
                 prepared.Encoding,
                 diff.SourceLineEnding,
                 diff.ProposedLineEnding,
                 diff.Truncated,
+                includeDiff,
                 warnings.ToArray(),
                 reviewReceipt?.Token,
                 reviewReceipt?.ExpiresAtUtc,

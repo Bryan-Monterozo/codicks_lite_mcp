@@ -57,6 +57,7 @@ public sealed record FilePatchPreviewResult(
     string SourceLineEnding,
     string ProposedLineEnding,
     bool Truncated,
+    bool DiffIncluded,
     IReadOnlyList<string> Warnings,
     string? ReviewToken,
     DateTimeOffset? ReviewExpiresAtUtc,
@@ -85,7 +86,8 @@ public interface IWorkspacePatchPreviewService
         string workspaceId,
         string relativePath,
         string patch,
-        string expectedHash);
+        string expectedHash,
+        bool includeDiff = false);
 }
 
 
@@ -100,6 +102,7 @@ public sealed record FilePatchReviewBinding(
 public sealed record FilePatchReviewReceipt(
     string Token,
     FilePatchReviewBinding Binding,
+    string Patch,
     DateTimeOffset IssuedAtUtc,
     DateTimeOffset ExpiresAtUtc,
     bool Consumed);
@@ -121,7 +124,8 @@ public sealed record FilePatchReviewValidation(
 public interface IFilePatchReviewStore
 {
     FilePatchReviewReceipt Issue(
-        FilePatchReviewBinding binding);
+        FilePatchReviewBinding binding,
+        string patch);
 
     FilePatchReviewValidation Validate(
         string? token);
@@ -135,7 +139,7 @@ public interface IWorkspacePatchApplyService
     MutationResult<FileMutationReceipt> Apply(
         string workspaceId,
         string relativePath,
-        string patch,
+        string? patch,
         string expectedHash,
         string reviewToken);
 }

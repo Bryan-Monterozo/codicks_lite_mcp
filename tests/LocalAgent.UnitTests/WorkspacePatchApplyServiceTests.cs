@@ -115,7 +115,7 @@ public sealed class WorkspacePatchApplyServiceTests : IDisposable
             services.Apply.Apply(
                 "test",
                 "sample.txt",
-                patch,
+                patch: null,
                 preview.Value.BaseSha256,
                 preview.Value.ReviewToken!);
 

@@ -15,9 +15,11 @@ public sealed class MemoryFilePatchReviewStore(
         new(StringComparer.Ordinal);
 
     public FilePatchReviewReceipt Issue(
-        FilePatchReviewBinding binding)
+        FilePatchReviewBinding binding,
+        string patch)
     {
         ArgumentNullException.ThrowIfNull(binding);
+        ArgumentNullException.ThrowIfNull(patch);
 
         lock (_sync)
         {
@@ -43,6 +45,7 @@ public sealed class MemoryFilePatchReviewStore(
             var receipt = new FilePatchReviewReceipt(
                 token,
                 binding,
+                patch,
                 now,
                 now.Add(Lifetime),
                 Consumed: false);
@@ -86,9 +89,18 @@ public sealed class MemoryFilePatchReviewStore(
             if (timeProvider.GetUtcNow() >
                 receipt.ExpiresAtUtc)
             {
+                var expired =
+                    receipt with
+                    {
+                        Patch = string.Empty
+                    };
+
+                _receipts[token] =
+                    expired;
+
                 return new FilePatchReviewValidation(
                     false,
-                    receipt,
+                    expired,
                     FilePatchReviewValidationError.ExpiredToken);
             }
 
@@ -120,6 +132,7 @@ public sealed class MemoryFilePatchReviewStore(
             _receipts[token] =
                 receipt with
                 {
+                    Patch = string.Empty,
                     Consumed = true
                 };
 

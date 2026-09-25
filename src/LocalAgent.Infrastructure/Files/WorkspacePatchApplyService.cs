@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using LocalAgent.Core.Configuration;
 using LocalAgent.Core.Files;
 using LocalAgent.Core.Security;
@@ -24,17 +26,10 @@ public sealed class WorkspacePatchApplyService(
     public MutationResult<FileMutationReceipt> Apply(
         string workspaceId,
         string relativePath,
-        string patch,
+        string? patch,
         string expectedHash,
         string reviewToken)
     {
-        if (patch is null)
-        {
-            return MutationResult.Fail<FileMutationReceipt>(
-                FileMutationError.InvalidRequest,
-                "patch is required.");
-        }
-
         if (!MutationValidation.IsSha256(
                 expectedHash))
         {
@@ -160,12 +155,34 @@ public sealed class WorkspacePatchApplyService(
                 decodedCurrent.Message);
         }
 
+        var effectivePatch =
+            patch ??
+            receipt.Patch;
+
+        if (patch is not null)
+        {
+            var suppliedPatchHash =
+                Convert.ToHexString(
+                    SHA256.HashData(
+                        Encoding.UTF8.GetBytes(
+                            patch)));
+
+            if (!string.Equals(
+                    suppliedPatchHash,
+                    receipt.Binding.PatchSha256,
+                    StringComparison.Ordinal))
+            {
+                return InvalidReviewToken(
+                    "Patch content does not match the reviewed patch.");
+            }
+        }
+
         var application =
             patchService.Apply(
                 new FilePatchRequest(
                     access.NormalizedRelativePath,
                     decodedCurrent.Content,
-                    patch,
+                    effectivePatch,
                     _maxPatchBytes));
 
         if (!string.Equals(
@@ -174,7 +191,7 @@ public sealed class WorkspacePatchApplyService(
                 StringComparison.Ordinal))
         {
             return InvalidReviewToken(
-                "Patch content does not match the reviewed patch.");
+                "Stored patch content does not match the reviewed patch.");
         }
 
         if (!application.Success)

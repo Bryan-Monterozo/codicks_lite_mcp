@@ -102,6 +102,142 @@ public sealed class McpToolSurfaceIntegrationTests : IDisposable
             Assert.Contains(tools, tool => tool.Name == expectedTool);
         }
 
+        Assert.DoesNotContain(
+            tools,
+            tool => tool.Name is
+                "backup_list" or
+                "backup_show" or
+                "backup_restore" or
+                "file_backup_restore");
+
+        var patchPreviewTool =
+            Assert.Single(
+                tools,
+                tool =>
+                    tool.Name ==
+                    "file_patch_preview");
+
+        var patchPreviewSchema =
+            GetInputSchema(
+                patchPreviewTool);
+
+        var previewProperties =
+            GetRequiredProperty(
+                patchPreviewSchema,
+                "properties");
+
+        var includeDiffSchema =
+            GetRequiredProperty(
+                previewProperties,
+                "includeDiff");
+
+        Assert.Equal(
+            JsonValueKind.False,
+            GetRequiredProperty(
+                includeDiffSchema,
+                "default")
+                .ValueKind);
+
+        var previewRequired =
+            GetRequiredProperty(
+                patchPreviewSchema,
+                "required");
+
+        Assert.Contains(
+            "workspaceId",
+            previewRequired
+                .EnumerateArray()
+                .Select(
+                    item =>
+                        item.GetString()));
+
+        Assert.Contains(
+            "relativePath",
+            previewRequired
+                .EnumerateArray()
+                .Select(
+                    item =>
+                        item.GetString()));
+
+        Assert.Contains(
+            "patch",
+            previewRequired
+                .EnumerateArray()
+                .Select(
+                    item =>
+                        item.GetString()));
+
+        Assert.Contains(
+            "expectedHash",
+            previewRequired
+                .EnumerateArray()
+                .Select(
+                    item =>
+                        item.GetString()));
+
+        Assert.DoesNotContain(
+            "includeDiff",
+            previewRequired
+                .EnumerateArray()
+                .Select(
+                    item =>
+                        item.GetString()));
+
+        var patchApplyTool =
+            Assert.Single(
+                tools,
+                tool =>
+                    tool.Name ==
+                    "file_patch_apply");
+
+        var patchApplySchema =
+            GetInputSchema(
+                patchApplyTool);
+
+        var applyProperties =
+            GetRequiredProperty(
+                patchApplySchema,
+                "properties");
+
+        _ =
+            GetRequiredProperty(
+                applyProperties,
+                "patch");
+
+        var applyRequired =
+            GetRequiredProperty(
+                patchApplySchema,
+                "required")
+                .EnumerateArray()
+                .Select(
+                    item =>
+                        item.GetString())
+                .Where(
+                    item =>
+                        item is not null)
+                .Cast<string>()
+                .ToArray();
+
+        Assert.Contains(
+            "workspaceId",
+            applyRequired);
+
+        Assert.Contains(
+            "relativePath",
+            applyRequired);
+
+        Assert.Contains(
+            "expectedHash",
+            applyRequired);
+
+        Assert.Contains(
+            "reviewToken",
+            applyRequired);
+
+        Assert.DoesNotContain(
+            "patch",
+            applyRequired);
+
         var workspaceList = await client.CallToolAsync(
             "workspace_list",
             new Dictionary<string, object?>(),
@@ -304,6 +440,97 @@ public sealed class McpToolSurfaceIntegrationTests : IDisposable
 
         throw new Xunit.Sdk.XunitException(
             $"Structured content did not contain '{propertyName}'.");
+    }
+
+    private static JsonElement GetInputSchema(
+        object tool)
+    {
+        var serialized =
+            JsonSerializer.SerializeToElement(
+                tool,
+                tool.GetType());
+
+        if (TryFindPropertyRecursive(
+                serialized,
+                "inputSchema",
+                out var inputSchema))
+        {
+            return inputSchema;
+        }
+
+        throw new Xunit.Sdk.XunitException(
+            $"Serialized MCP tool did not expose inputSchema: {serialized}");
+    }
+
+    private static bool TryFindPropertyRecursive(
+        JsonElement element,
+        string propertyName,
+        out JsonElement value)
+    {
+        if (element.ValueKind ==
+            JsonValueKind.Object)
+        {
+            foreach (var property in
+                     element.EnumerateObject())
+            {
+                if (string.Equals(
+                        property.Name,
+                        propertyName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    value =
+                        property.Value.Clone();
+
+                    return true;
+                }
+
+                if (TryFindPropertyRecursive(
+                        property.Value,
+                        propertyName,
+                        out value))
+                {
+                    return true;
+                }
+            }
+        }
+        else if (element.ValueKind ==
+                 JsonValueKind.Array)
+        {
+            foreach (var item in
+                     element.EnumerateArray())
+            {
+                if (TryFindPropertyRecursive(
+                        item,
+                        propertyName,
+                        out value))
+                {
+                    return true;
+                }
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static JsonElement GetRequiredProperty(
+        JsonElement element,
+        string propertyName)
+    {
+        foreach (var property in
+                 element.EnumerateObject())
+        {
+            if (string.Equals(
+                    property.Name,
+                    propertyName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value.Clone();
+            }
+        }
+
+        throw new Xunit.Sdk.XunitException(
+            $"JSON object did not contain '{propertyName}': {element}");
     }
 
     private static string ComputeHash(string content) =>

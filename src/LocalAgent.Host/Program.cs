@@ -6,6 +6,7 @@ using LocalAgent.Core.Paths;
 using LocalAgent.Core.Recovery;
 using LocalAgent.Core.Security;
 using LocalAgent.Core.Workspaces;
+using LocalAgent.Host;
 using LocalAgent.Host.Configuration;
 using LocalAgent.Infrastructure.Audit;
 using LocalAgent.Infrastructure.Execution;
@@ -105,6 +106,7 @@ builder.Services.AddSingleton<IWorkspacePatchApplyService, WorkspacePatchApplySe
 builder.Services.AddSingleton<IFileHasher, Sha256FileHasher>();
 builder.Services.AddSingleton<IAtomicFileWriter, AtomicFileWriter>();
 builder.Services.AddSingleton<IUpdateBackupStore, UpdateBackupStore>();
+builder.Services.AddSingleton<IUpdateBackupManagementService, UpdateBackupManagementService>();
 builder.Services.AddSingleton<IWorkspaceMutationService, WorkspaceMutationService>();
 
 // Chunk 06 lifecycle/recovery services.
@@ -127,4 +129,13 @@ builder.Services
     .WithStdioServerTransport()
     .WithToolsFromAssembly();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+if (LocalBackupCommand.TryRun(
+        args,
+        host.Services))
+{
+    return;
+}
+
+await host.RunAsync();

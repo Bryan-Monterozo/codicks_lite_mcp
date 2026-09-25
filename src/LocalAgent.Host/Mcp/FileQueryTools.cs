@@ -143,7 +143,7 @@ public static class FileQueryTools
         Destructive = false,
         Idempotent = true,
         OpenWorld = false)]
-    [Description("Validates and applies one strict unified-diff patch entirely in memory against an approved workspace text file, then returns the canonical review diff without modifying the file.")]
+    [Description("Preferred binding step for normal localized edits. Validates one strict unified patch entirely in memory, stores the exact patch only in the short-lived review receipt, and returns compact metadata by default. Set includeDiff=true only when the user wants the canonical diff/hunks. Never modifies the file.")]
     public static FilePatchPreviewResult FilePatchPreview(
         IWorkspacePatchPreviewService previewService,
         IAuditWriter auditWriter,
@@ -151,7 +151,8 @@ public static class FileQueryTools
         [Description("Configured workspace id.")] string workspaceId,
         [Description("Workspace-relative regular text file path. Patch headers must target this exact file.")] string relativePath,
         [Description("Strict one-file unified diff containing ---/+++ headers and zero or more @@ hunks. Git rename/mode/binary metadata and fuzzy hunk placement are not supported.")] string patch,
-        [Description("Required SHA-256 of the current file bytes from a prior file_read/file_diff result.")] string expectedHash)
+        [Description("Required SHA-256 of the current file bytes from a prior file_read/file_diff result.")] string expectedHash,
+        [Description("Return canonical unifiedDiff and structured hunks. Defaults to false for transfer-efficient binding-only preview.")] bool includeDiff = false)
     {
         ArgumentNullException.ThrowIfNull(previewService);
         ArgumentNullException.ThrowIfNull(auditWriter);
@@ -181,7 +182,8 @@ public static class FileQueryTools
                 workspaceId,
                 relativePath,
                 patch,
-                expectedHash),
+                expectedHash,
+                includeDiff),
             auditWriter,
             auditContext);
     }

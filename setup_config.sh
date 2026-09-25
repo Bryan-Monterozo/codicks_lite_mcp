@@ -19,7 +19,7 @@ set -euo pipefail
 # This script does NOT modify workspace permissions in agent.json.
 # =============================================================================
 
-SCRIPT_VERSION="1.2.1"
+SCRIPT_VERSION="1.2.2"
 DEFAULT_PROFILE="codicks-lite-local-stdio"
 DEFAULT_MCP_COMMAND="$HOME/.local/bin/codicks-lite-mcp"
 DEFAULT_KEYCHAIN_SERVICE="CodicksLiteMcp.OpenAI.RuntimeApiKey"
